@@ -33,6 +33,7 @@ erDiagram
         timestamp created_at "Upload Date"
         timestamp updated_at
         boolean is_deleted "Soft delete flag"
+        jsonb metadata "Extra info (e.g. { duration: '02:34', width: 1920, height: 1080 })"
     }
 
     TAGS {
@@ -70,6 +71,7 @@ Stores metadata for uploaded files. The actual file content should be stored in 
 - **s3_key**: The reference to the file in object storage.
 - **url**: Can be a permanent URL or generated presigned URL.
 - **is_deleted**: For "Trash" functionality or soft deletes.
+- **metadata**: JSONB column to store file-specific details like video duration, image resolution, etc.
 
 ### 3. Tags (`tags`)
 Stores unique tag names.

@@ -6,8 +6,17 @@ const Login = () => {
     const navigate = useNavigate();
 
     const handleLogin = () => {
-        // Mock login for now
-        navigate('/gallery');
+        // Mock login: Store dummy tokens
+        const mockAccessToken = `mock_access_token_${Date.now()}`;
+        const mockRefreshToken = `mock_refresh_token_${Date.now()}`;
+
+        // Dynamic import to avoid circular dependency issues if any, 
+        // but standard import is fine here. Using direct import in file head is better.
+        // We will add import at top.
+        import('../utils/auth').then(({ setTokens }) => {
+            setTokens(mockAccessToken, mockRefreshToken);
+            navigate('/gallery');
+        });
     };
 
     return (
