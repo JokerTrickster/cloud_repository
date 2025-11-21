@@ -7,16 +7,16 @@ import { ACTIVITY_DATA } from '../data/mockData';
 
 // Memoized Day Cell Component
 const DayCell = memo(({ date, activity, isToday, onClick }) => (
-    <div
+    <div className="day-cell"
         onClick={onClick}
         style={{
-            height: '120px',
+            aspectRatio: '1',
             background: 'var(--surface)',
             borderRadius: '16px',
-            padding: '10px',
+            padding: '6px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px',
+            gap: '4px',
             cursor: 'pointer',
             transition: 'all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)',
             border: isToday ? '2px solid var(--primary)' : '1px solid transparent',
@@ -64,11 +64,11 @@ const DayCell = memo(({ date, activity, isToday, onClick }) => (
 
         {/* Tags Area */}
         {activity && activity.tags && activity.tags.length > 0 && (
-            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {activity.tags.slice(0, 2).map((tag, idx) => (
                     <span key={idx} style={{
-                        fontSize: '11px',
-                        padding: '4px 8px',
+                        fontSize: '12px',
+                        padding: '6px 10px',
                         background: 'rgba(66, 133, 244, 0.1)', // primary with opacity
                         color: 'var(--primary)',
                         borderRadius: '6px',
@@ -105,14 +105,49 @@ const MyPage = () => {
     return (
         <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '100px' }}>
             <style>{`
+                /* Calendar layout */
                 .calendar-grid {
                     display: grid;
                     grid-template-columns: repeat(7, 1fr);
                     gap: 12px;
+                    grid-auto-rows: 0;
+                }
+                .day-cell {
+                    aspect-ratio: 1;
+                    padding: 10px;
+                    gap: 8px;
+                }
+                /* Stats cards */
+                .stats-container {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 24px;
+                }
+                /* Header */
+                .header-title {
+                    font-size: 28px;
+                }
+                .header-sub {
+                    font-size: 14px;
                 }
                 @media (max-width: 768px) {
                     .calendar-grid {
-                        gap: 8px;
+                        gap: 6px;
+                    }
+                    .day-cell {
+                        aspect-ratio: 1;
+                        padding: 6px;
+                        gap: 4px;
+                    }
+                    .stats-container {
+                        grid-template-columns: 1fr;
+                        gap: 16px;
+                    }
+                    .header-title {
+                        font-size: 24px;
+                    }
+                    .header-sub {
+                        font-size: 12px;
                     }
                 }
             `}</style>
