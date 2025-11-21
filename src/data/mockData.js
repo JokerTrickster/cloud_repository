@@ -3,11 +3,12 @@ import { format } from 'date-fns';
 // Mock Data for Gallery
 export const MOCK_FILES = Array.from({ length: 50 }).map((_, i) => {
     const date = new Date(2025, 10, 21 - Math.floor(i / 5)); // Group by every 5 items
+    const isVideo = i % 5 === 0; // Every 5th item is a video
     return {
         id: i,
         url: `https://picsum.photos/seed/${i}/400/400`,
-        type: 'image',
-        name: `Photo ${i + 1}`,
+        type: isVideo ? 'video' : 'image',
+        name: isVideo ? `Video ${i + 1}` : `Photo ${i + 1}`,
         date: format(date, 'yyyy-MM-dd'),
         tags: i % 3 === 0 ? ['여행', '풍경'] : i % 3 === 1 ? ['음식'] : ['가족', '친구']
     };

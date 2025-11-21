@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, memo } from 'react';
-import { Search, Grid, Check, X } from 'lucide-react';
+import { Search, Grid, Check, X, Play, Trash2, Filter } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { MOCK_FILES, RECENT_TAGS } from '../data/mockData';
@@ -28,10 +28,32 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                transition: 'transform 0.2s'
+                transition: 'transform 0.2s',
+                opacity: isSelectionMode && isSelected ? 0.7 : 1
             }}
             loading="lazy"
         />
+
+        {/* Video Indicator */}
+        {file.type === 'video' && (
+            <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(4px)'
+            }}>
+                <Play size={20} fill="white" color="white" style={{ marginLeft: '2px' }} />
+            </div>
+        )}
+
         {/* Tag Overlay */}
         <div style={{
             position: 'absolute',
@@ -70,7 +92,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 border: '2px solid white',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                transition: 'all 0.2s'
             }}>
                 {isSelected && <Check size={14} color="white" />}
             </div>
@@ -79,10 +102,12 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 ));
 
 const Gallery = () => {
+    const [files, setFiles] = useState(MOCK_FILES);
     const [searchTerm, setSearchTerm] = useState('');
     const [imageSize, setImageSize] = useState(150);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [sortOption, setSortOption] = useState('date'); // date, name, tag
+    const [filterType, setFilterType] = useState('all'); // all, image, video
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [targetDate, setTargetDate] = useState('');
 
@@ -113,17 +138,18 @@ const Gallery = () => {
 
     // Memoized Filter and Sort Logic
     const filteredFiles = useMemo(() => {
-        return MOCK_FILES.filter(file => {
+        return files.filter(file => {
             const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase().replace('#', '')));
-            return matchesSearch;
+            const matchesType = filterType === 'all' || file.type === filterType;
+            return matchesSearch && matchesType;
         }).sort((a, b) => {
             if (sortOption === 'date') return new Date(b.date) - new Date(a.date);
             if (sortOption === 'name') return a.name.localeCompare(b.name);
             if (sortOption === 'tag') return a.tags[0]?.localeCompare(b.tags[0] || '') || 0;
             return 0;
         });
-    }, [searchTerm, sortOption]);
+    }, [files, searchTerm, sortOption, filterType]);
 
     // Memoized Grouping
     const groupedFiles = useMemo(() => {
@@ -151,6 +177,14 @@ const Gallery = () => {
         alert(`${selectedFiles.length}개의 파일을 다운로드합니다.`);
         setSelectedFiles([]);
         setIsSelectionMode(false);
+    };
+
+    const handleDelete = () => {
+        if (window.confirm(`${selectedFiles.length}개의 파일을 삭제하시겠습니까?`)) {
+            setFiles(prev => prev.filter(file => !selectedFiles.includes(file.id)));
+            setSelectedFiles([]);
+            setIsSelectionMode(false);
+        }
     };
 
     return (
@@ -229,6 +263,28 @@ const Gallery = () => {
                     )}
                 </div>
 
+                {/* Filter Tabs */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    {['all', 'image', 'video'].map(type => (
+                        <button
+                            key={type}
+                            onClick={() => setFilterType(type)}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: 'var(--radius-full)',
+                                border: filterType === type ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                background: filterType === type ? 'var(--primary)' : 'var(--surface)',
+                                color: filterType === type ? 'white' : 'var(--text-secondary)',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                textTransform: 'capitalize'
+                            }}
+                        >
+                            {type === 'all' ? '전체' : type === 'image' ? '이미지' : '동영상'}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Recent Tags */}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '8px' }}>
                     {RECENT_TAGS.map((tag) => (
@@ -296,39 +352,7 @@ const Gallery = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        {isSelectionMode ? (
-                            <>
-                                <span style={{ display: 'flex', alignItems: 'center', fontSize: '12px' }}>
-                                    {selectedFiles.length}/30
-                                </span>
-                                <button
-                                    onClick={handleDownload}
-                                    disabled={selectedFiles.length === 0}
-                                    style={{
-                                        padding: '6px 12px',
-                                        background: 'var(--primary)',
-                                        color: 'white',
-                                        borderRadius: 'var(--radius-full)',
-                                        fontSize: '12px',
-                                        opacity: selectedFiles.length === 0 ? 0.5 : 1
-                                    }}
-                                >
-                                    다운로드
-                                </button>
-                                <button
-                                    onClick={() => { setIsSelectionMode(false); setSelectedFiles([]); }}
-                                    style={{
-                                        padding: '6px 12px',
-                                        background: 'var(--surface)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: 'var(--radius-full)',
-                                        fontSize: '12px'
-                                    }}
-                                >
-                                    취소
-                                </button>
-                            </>
-                        ) : (
+                        {!isSelectionMode && (
                             <button
                                 onClick={() => setIsSelectionMode(true)}
                                 style={{
@@ -339,7 +363,8 @@ const Gallery = () => {
                                     fontSize: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '4px'
+                                    gap: '4px',
+                                    cursor: 'pointer'
                                 }}
                             >
                                 <Check size={14} /> 선택
@@ -380,6 +405,98 @@ const Gallery = () => {
                     </div>
                 ))}
             </div>
+
+            {/* Floating Action Bar for Selection Mode */}
+            {isSelectionMode && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '32px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'var(--surface)',
+                    padding: '8px 16px',
+                    borderRadius: '100px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    zIndex: 100,
+                    border: '1px solid var(--border)',
+                    animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}>
+                    <style>{`
+                        @keyframes slideUp {
+                            from { transform: translate(-50%, 100%); opacity: 0; }
+                            to { transform: translate(-50%, 0); opacity: 1; }
+                        }
+                    `}</style>
+
+                    <button
+                        onClick={() => { setIsSelectionMode(false); setSelectedFiles([]); }}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', color: 'var(--text-secondary)'
+                        }}
+                    >
+                        <X size={20} />
+                    </button>
+
+                    <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+
+                    <span style={{ fontSize: '14px', fontWeight: '600', minWidth: '40px', textAlign: 'center' }}>
+                        {selectedFiles.length}
+                    </span>
+
+                    <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            onClick={handleDownload}
+                            disabled={selectedFiles.length === 0}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: selectedFiles.length === 0 ? 'var(--text-tertiary)' : 'var(--primary)',
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                transition: 'color 0.2s'
+                            }}
+                            title="다운로드"
+                        >
+                            <div style={{
+                                padding: '8px',
+                                borderRadius: '50%',
+                                background: selectedFiles.length > 0 ? 'rgba(26, 115, 232, 0.1)' : 'transparent'
+                            }}>
+                                <Check size={20} style={{ display: 'none' }} /> {/* Hidden ref for size */}
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={handleDelete}
+                            disabled={selectedFiles.length === 0}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: selectedFiles.length === 0 ? 'var(--text-tertiary)' : '#DC2626',
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                transition: 'color 0.2s'
+                            }}
+                            title="삭제"
+                        >
+                            <div style={{
+                                padding: '8px',
+                                borderRadius: '50%',
+                                background: selectedFiles.length > 0 ? '#FEE2E2' : 'transparent'
+                            }}>
+                                <Trash2 size={20} />
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

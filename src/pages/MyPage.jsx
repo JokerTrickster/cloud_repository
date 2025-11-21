@@ -12,61 +12,76 @@ const DayCell = memo(({ date, activity, isToday, onClick }) => (
         onClick={onClick}
         style={{
             border: '1px solid var(--border)',
-            padding: '4px',
+            padding: '6px',
             background: isToday ? '#E8F0FE' : 'var(--surface)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '2px',
-            fontSize: '12px',
+            gap: '4px',
+            fontSize: '14px',
             position: 'relative',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'background 0.2s'
         }}
+        onMouseEnter={(e) => e.currentTarget.style.background = isToday ? '#D2E3FC' : '#F8F9FA'}
+        onMouseLeave={(e) => e.currentTarget.style.background = isToday ? '#E8F0FE' : 'var(--surface)'}
     >
         <div style={{
-            fontWeight: isToday ? 'bold' : 'normal',
+            fontWeight: isToday ? 'bold' : '500',
             color: isToday ? 'var(--primary)' : 'var(--text-primary)',
-            marginBottom: '2px',
-            fontSize: '10px'
+            marginBottom: '4px',
+            fontSize: '12px'
         }}>
             {format(date, 'd')}
         </div>
 
         {activity && (
-            <div className="activity-content">
-                {/* Desktop View */}
-                <div className="desktop-activity">
-                    <div style={{ display: 'flex', gap: '4px', marginBottom: '2px' }}>
+            <div className="activity-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {/* Unified View for Desktop & Mobile (Responsive) */}
+                <div className="activity-details" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {activity.uploads > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--primary)' }}>
-                                <Upload size={10} /> {activity.uploads}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '3px',
+                                background: 'rgba(26, 115, 232, 0.1)', color: 'var(--primary)',
+                                padding: '2px 6px', borderRadius: '12px',
+                                fontSize: '11px', fontWeight: '600'
+                            }}>
+                                <Upload size={12} strokeWidth={2.5} />
+                                <span>{activity.uploads}</span>
                             </div>
                         )}
                         {activity.downloads > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--secondary)' }}>
-                                <Download size={10} /> {activity.downloads}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '3px',
+                                background: 'rgba(234, 67, 53, 0.1)', color: 'var(--secondary)',
+                                padding: '2px 6px', borderRadius: '12px',
+                                fontSize: '11px', fontWeight: '600'
+                            }}>
+                                <Download size={12} strokeWidth={2.5} />
+                                <span>{activity.downloads}</span>
                             </div>
                         )}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                        {activity.tags.map(tag => (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', overflow: 'hidden', maxHeight: '36px' }}>
+                        {activity.tags.slice(0, 2).map(tag => (
                             <span key={tag} style={{
-                                fontSize: '9px',
-                                padding: '1px 4px',
-                                background: 'rgba(0,0,0,0.05)',
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                background: '#F1F3F4',
                                 borderRadius: '4px',
-                                color: 'var(--text-secondary)'
+                                color: '#5F6368',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '100%'
                             }}>
                                 #{tag}
                             </span>
                         ))}
+                        {activity.tags.length > 2 && (
+                            <span style={{ fontSize: '10px', color: '#5F6368', padding: '2px' }}>...</span>
+                        )}
                     </div>
-                </div>
-
-                {/* Mobile View (Dots) */}
-                <div className="mobile-activity" style={{ display: 'none', gap: '2px', justifyContent: 'center', marginTop: '2px' }}>
-                    {activity.uploads > 0 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--primary)' }} />}
-                    {activity.downloads > 0 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--secondary)' }} />}
-                    {activity.tags.length > 0 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)' }} />}
                 </div>
             </div>
         )}
@@ -111,12 +126,6 @@ const MyPage = () => {
         @media (max-width: 768px) {
           .calendar-cell {
             min-height: 60px !important;
-          }
-          .desktop-activity {
-            display: none !important;
-          }
-          .mobile-activity {
-            display: flex !important;
           }
           .stats-container {
             grid-template-columns: 1fr;
