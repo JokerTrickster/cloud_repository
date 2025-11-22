@@ -31,6 +31,25 @@
 - 오프라인 지원 및 빠른 로딩 속도
 - 반응형 레이아웃 (Mobile, Tablet, Desktop)
 
+
+## 📱 스크린샷
+
+| 로그인 | 갤러리 |
+|:---:|:---:|
+| <img src="screenshots/login.png" width="200" /> | <img src="screenshots/gallery.png" width="200" /> |
+| **로그인 페이지** | **갤러리 그리드** |
+
+| 업로드 | 마이페이지 |
+|:---:|:---:|
+| <img src="screenshots/upload.png" width="200" /> | <img src="screenshots/mypage_top.png" width="200" /> |
+| **파일 업로드** | **활동 대시보드** |
+
+| 활동 캘린더 |
+|:---:|
+| <img src="screenshots/mypage_calendar.png" width="200" /> |
+| **월간 활동 이력** |
+
+
 ## 🛠 기술 스택
 
 - **Framework**: React 19, Vite
