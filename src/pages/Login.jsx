@@ -1,22 +1,58 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cloud } from 'lucide-react';
+import { setTokens } from '../utils/auth';
+import client from '../api/client';
 
 const Login = () => {
     const navigate = useNavigate();
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = () => {
-        // Mock login: Store dummy tokens
-        const mockAccessToken = `mock_access_token_${Date.now()}`;
-        const mockRefreshToken = `mock_refresh_token_${Date.now()}`;
+    useEffect(() => {
+        // Initialize Google Sign-In
+        if (window.google) {
+            window.google.accounts.id.initialize({
+                client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                callback: handleGoogleCallback,
+            });
 
-        // Dynamic import to avoid circular dependency issues if any, 
-        // but standard import is fine here. Using direct import in file head is better.
-        // We will add import at top.
-        import('../utils/auth').then(({ setTokens }) => {
-            setTokens(mockAccessToken, mockRefreshToken);
+            // Render the Google Sign-In button
+            window.google.accounts.id.renderButton(
+                document.getElementById('googleSignInButton'),
+                {
+                    theme: 'outline',
+                    size: 'large',
+                    width: '100%',
+                    text: 'signin_with',
+                    locale: 'ko'
+                }
+            );
+        }
+    }, []);
+
+    const handleGoogleCallback = async (response) => {
+        setIsLoading(true);
+        setError('');
+
+        try {
+            // Send ID token to backend
+            const { data } = await client.post('/v0.1/auth/google/signin', {
+                idToken: response.credential
+            });
+
+            // Store tokens
+            setTokens(data.accessToken, data.refreshToken);
+
+            // Navigate to gallery
             navigate('/gallery');
-        });
+        } catch (err) {
+            console.error('Login failed:', err);
+            const errorMessage = err.response?.data?.message || '로그인에 실패했습니다. 다시 시도해주세요.';
+            setError(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -38,28 +74,31 @@ const Login = () => {
                     모든 사진과 동영상을 한 곳에서 안전하게 보관하세요.
                 </p>
 
-                <button
-                    onClick={handleLogin}
-                    style={{
-                        width: '100%',
+                {error && (
+                    <div style={{
+                        marginBottom: '16px',
                         padding: '12px',
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-full)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px',
-                        fontSize: '16px',
-                        color: 'var(--text-primary)',
-                        transition: 'background 0.2s'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.background = '#f1f3f4'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'var(--surface)'}
-                >
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20" height="20" />
-                    Google 계정으로 로그인
-                </button>
+                        background: '#fee',
+                        border: '1px solid #fcc',
+                        borderRadius: 'var(--radius)',
+                        color: '#c33',
+                        fontSize: '14px'
+                    }}>
+                        {error}
+                    </div>
+                )}
+
+                {isLoading ? (
+                    <div style={{
+                        padding: '12px',
+                        textAlign: 'center',
+                        color: 'var(--text-secondary)'
+                    }}>
+                        로그인 중...
+                    </div>
+                ) : (
+                    <div id="googleSignInButton" style={{ width: '100%' }}></div>
+                )}
             </div>
             <footer style={{ marginTop: '24px', color: 'var(--text-secondary)', fontSize: '12px' }}>
                 © 2025 CloudBox Inc.
