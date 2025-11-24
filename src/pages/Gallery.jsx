@@ -416,32 +416,7 @@ const Gallery = () => {
                         ))}
                     </div>
 
-                    <div style={{ position: 'relative' }}>
-                        <button
-                            onClick={() => setShowCalendar(!showCalendar)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 12px',
-                                borderRadius: 'var(--radius-full)',
-                                border: (dateRange.start || showCalendar) ? '1px solid var(--primary)' : '1px solid var(--border)',
-                                background: 'var(--surface)',
-                                color: (dateRange.start || showCalendar) ? 'var(--primary)' : 'var(--text-secondary)',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            <CalendarIcon size={14} />
-                            {dateRange.start ? (
-                                <>
-                                    {format(dateRange.start, 'M.d')}
-                                    {dateRange.end && ` ~ ${format(dateRange.end, 'M.d')}`}
-                                </>
-                            ) : '날짜 선택'}
-                        </button>
-                        {showCalendar && renderCalendar()}
-                    </div>
+
                 </div>
 
                 {/* Recent Tags */}
