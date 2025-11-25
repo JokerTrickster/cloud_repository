@@ -290,3 +290,4 @@ wait
 
 **마지막 업데이트**: 2025-11-25
 **작성자**: Claude Code
+**배포 테스트**: GitHub Secrets 설정 완료
