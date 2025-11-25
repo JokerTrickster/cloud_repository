@@ -3,6 +3,8 @@
 웹 기반의 클라우드 저장소 서비스로, 모바일 퍼스트 PWA(Progressive Web App)로 제작되었습니다.
 구글 스타일의 직관적인 UI를 제공하며, 사진과 동영상을 안전하게 저장하고 관리할 수 있습니다.
 
+**Latest Deployment**: 2025-11-25 (Google OAuth settings updated)
+
 ## ✨ 주요 기능
 
 ### 1. 🔐 로그인
