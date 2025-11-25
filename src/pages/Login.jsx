@@ -48,8 +48,15 @@ const Login = () => {
             // Store tokens
             setTokens(data.accessToken, data.refreshToken);
 
-            // Navigate to gallery
-            navigate('/gallery');
+            // Check if there's a redirect URL saved from before login
+            const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+            if (redirectPath) {
+                sessionStorage.removeItem('redirectAfterLogin');
+                navigate(redirectPath);
+            } else {
+                // Default navigation to gallery
+                navigate('/gallery');
+            }
         } catch (err) {
             console.error('Login failed:', err);
             console.error('Error response:', err.response);

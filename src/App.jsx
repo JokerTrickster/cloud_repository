@@ -5,18 +5,23 @@ import Gallery from './pages/Gallery';
 import Upload from './pages/Upload';
 import MyPage from './pages/MyPage';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route element={<Layout />}>
+        <Route element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/mypage" element={<MyPage />} />
         </Route>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/gallery" replace />} />
       </Routes>
     </Router>
   );

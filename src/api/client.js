@@ -32,13 +32,32 @@ client.interceptors.response.use(
 
             try {
                 const refreshToken = getRefreshToken();
+
+                // If no refresh token exists, redirect to login immediately
                 if (!refreshToken) {
-                    throw new Error('No refresh token');
+                    console.log('No refresh token available, redirecting to login');
+                    clearTokens();
+                    // Save the current path to redirect back after login
+                    const currentPath = window.location.pathname;
+                    if (currentPath !== '/login') {
+                        sessionStorage.setItem('redirectAfterLogin', currentPath);
+                    }
+                    window.location.href = '/login';
+                    return Promise.reject(new Error('No refresh token available'));
                 }
 
-                // Call refresh endpoint (Mocking this part as we don't have a real backend yet)
-                // In a real app: const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-                // For now, we simulate a successful refresh with a new dummy token
+                // Try to refresh the token
+                // In production, this would be an actual API call
+                // const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+
+                // For development: simulate token refresh
+                // You can set this to fail to test the redirect behavior
+                const shouldSimulateRefreshSuccess = Math.random() > 0.3; // 70% success rate
+
+                if (!shouldSimulateRefreshSuccess) {
+                    throw new Error('Refresh token expired');
+                }
+
                 const newAccessToken = `new_mock_access_token_${Date.now()}`;
                 const newRefreshToken = `new_mock_refresh_token_${Date.now()}`;
 
@@ -49,13 +68,22 @@ client.interceptors.response.use(
                 return client(originalRequest);
 
             } catch (refreshError) {
-                // Refresh failed - logout user
+                // Refresh failed - clear tokens and redirect to login
+                console.log('Token refresh failed:', refreshError.message);
                 clearTokens();
+
+                // Save the current path to redirect back after login
+                const currentPath = window.location.pathname;
+                if (currentPath !== '/login') {
+                    sessionStorage.setItem('redirectAfterLogin', currentPath);
+                }
+
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             }
         }
 
+        // For other errors (403, 404, 500, etc.), just reject
         return Promise.reject(error);
     }
 );
