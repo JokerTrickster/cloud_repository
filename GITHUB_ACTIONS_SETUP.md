@@ -6,7 +6,7 @@
 - [ ] **AWS Access Key ID** - IAM 사용자의 액세스 키
 - [ ] **AWS Secret Access Key** - IAM 사용자의 시크릿 키
 - [ ] **S3 Bucket Name** - 웹호스팅할 S3 버킷 이름 (예: cloudbox-app)
-- [ ] **AWS Region** - S3 버킷 리전 (기본: ap-northeast-2)
+- [ ] **AWS Region** - S3 버킷 리전 (기본: ap-south-1)
 
 ### 2️⃣ CloudFront 관련 (선택)
 - [ ] **CloudFront Distribution ID** - CDN 사용 시 필요
@@ -98,8 +98,8 @@
 ```bash
 aws s3api create-bucket \
   --bucket cloudbox-app \
-  --region ap-northeast-2 \
-  --create-bucket-configuration LocationConstraint=ap-northeast-2
+  --region ap-south-1 \
+  --create-bucket-configuration LocationConstraint=ap-south-1
 ```
 
 ### 정적 웹 호스팅 활성화

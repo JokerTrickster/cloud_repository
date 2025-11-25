@@ -9,7 +9,7 @@ on:
 
 # 환경 변수
 env:
-  AWS_REGION: ap-northeast-2
+  AWS_REGION: ap-south-1
   S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}  # GitHub Secrets에 저장
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}  # 선택사항
 
@@ -158,7 +158,7 @@ jobs:
       if: success()
       run: |
         echo "🎉 Deployment successful!"
-        echo "🌐 Website URL: http://$S3_BUCKET.s3-website.$AWS_REGION.amazonaws.com"
+        echo "🌐 Website URL: http://cloudbox-app.s3-website.ap-south-1.amazonaws.com"
         if [ ! -z "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
           DOMAIN=$(aws cloudfront get-distribution \
             --id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
