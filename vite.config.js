@@ -29,4 +29,20 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+      // xù API (Ï∏: 18081)
+      '/v0.1': {
+        target: 'http://13.203.37.93:18081',
+        changeOrigin: true,
+        secure: false,
+      },
+      // | API (Ï∏: 18080)
+      '/api/v1': {
+        target: 'http://localhost:18080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { MOCK_FILES, RECENT_TAGS } from '../data/mockData';
+import fileApi from '../api/fileApi';
+import FileUpload from '../components/FileUpload';
 
 // Memoized Gallery Item Component
 const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm }) => (
@@ -125,11 +126,12 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 
 const Gallery = () => {
     const location = useLocation();
-    const [files, setFiles] = useState(MOCK_FILES);
+    const [files, setFiles] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [imageSize, setImageSize] = useState(150);
     const [selectedFiles, setSelectedFiles] = useState([]);
-    const [sortOption, setSortOption] = useState('date-desc'); // date, name, tag
+    const [sortOption, setSortOption] = useState('latest'); // latest, oldest, name, size
     const [filterType, setFilterType] = useState('all'); // all, image, video
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [targetDate, setTargetDate] = useState('');
@@ -138,7 +140,14 @@ const Gallery = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showTagInput, setShowTagInput] = useState(false);
     const [manualTag, setManualTag] = useState('');
-    const [tags, setTags] = useState(RECENT_TAGS.slice(0, 5));
+    const [tags, setTags] = useState([]);
+    const [showUpload, setShowUpload] = useState(false);
+    const [error, setError] = useState('');
+
+    // Load files from API
+    useEffect(() => {
+        loadFiles();
+    }, [dateRange, filterType, sortOption]);
 
     // Handle URL query param for date navigation
     useEffect(() => {
@@ -155,6 +164,50 @@ const Gallery = () => {
             }, 500);
         }
     }, [location.search]);
+
+    const loadFiles = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const params = {
+                file_type: filterType === 'all' ? undefined : filterType,
+                sort: sortOption,
+                start_date: dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
+                end_date: dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
+                page: 1,
+                page_size: 100,
+            };
+
+            const result = await fileApi.getFiles(params);
+
+            // Transform API response to match frontend structure
+            const transformedFiles = result.files.map(file => ({
+                id: file.id,
+                name: file.file_name,
+                url: file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
+                type: file.file_type,
+                date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
+                tags: file.tags ? file.tags.map(t => t.name) : [],
+                size: file.file_size,
+                created_at: file.created_at,
+            }));
+
+            setFiles(transformedFiles);
+
+            // Extract unique tags
+            const allTags = new Set();
+            transformedFiles.forEach(file => {
+                file.tags.forEach(tag => allTags.add(tag));
+            });
+            setTags(Array.from(allTags).slice(0, 5));
+
+        } catch (err) {
+            console.error('Failed to load files:', err);
+            setError(err.response?.data?.error || '파일을 불러오는데 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleScrollToDate = (e) => {
         const date = e.target.value;
@@ -243,38 +296,15 @@ const Gallery = () => {
         );
     };
 
-    // Memoized Filter and Sort Logic
+    // Memoized Filter and Sort Logic (client-side filtering for search term only)
     const filteredFiles = useMemo(() => {
         return files.filter(file => {
             const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase().replace('#', '')));
-            const matchesType = filterType === 'all' || file.type === filterType;
 
-            let matchesDate = true;
-            if (dateRange.start && dateRange.end) {
-                const fileDate = parseISO(file.date);
-                matchesDate = isWithinInterval(fileDate, {
-                    start: startOfDay(dateRange.start),
-                    end: endOfDay(dateRange.end)
-                });
-            }
-
-            return matchesSearch && matchesType && matchesDate;
+            return matchesSearch;
         });
-
-        // Sort
-        if (sortOption === 'date-desc') {
-            result.sort((a, b) => new Date(b.date) - new Date(a.date));
-        } else if (sortOption === 'date-asc') {
-            result.sort((a, b) => new Date(a.date) - new Date(b.date));
-        } else if (sortOption === 'name-asc') {
-            result.sort((a, b) => a.name.localeCompare(b.name));
-        } else if (sortOption === 'name-desc') {
-            result.sort((a, b) => b.name.localeCompare(a.name));
-        }
-
-        return result;
-    }, [files, searchTerm, filterType, dateRange, sortOption]);
+    }, [files, searchTerm]);
 
     // Memoized Grouping
     const groupedFiles = useMemo(() => {
@@ -298,18 +328,37 @@ const Gallery = () => {
         }
     };
 
-    const handleDownload = () => {
-        alert(`${selectedFiles.length}개의 파일을 다운로드합니다.`);
-        setSelectedFiles([]);
-        setIsSelectionMode(false);
-    };
-
-    const handleDelete = () => {
-        if (window.confirm(`${selectedFiles.length}개의 파일을 삭제하시겠습니까?`)) {
-            setFiles(prev => prev.filter(file => !selectedFiles.includes(file.id)));
+    const handleDownload = async () => {
+        try {
+            await fileApi.downloadBatchFiles(selectedFiles);
             setSelectedFiles([]);
             setIsSelectionMode(false);
+        } catch (err) {
+            console.error('Download failed:', err);
+            alert('다운로드에 실패했습니다.');
         }
+    };
+
+    const handleDelete = async () => {
+        if (window.confirm(`${selectedFiles.length}개의 파일을 삭제하시겠습니까?`)) {
+            try {
+                await fileApi.deleteBatchFiles(selectedFiles);
+                setSelectedFiles([]);
+                setIsSelectionMode(false);
+                // Reload files
+                loadFiles();
+            } catch (err) {
+                console.error('Delete failed:', err);
+                alert('삭제에 실패했습니다.');
+            }
+        }
+    };
+
+    const handleUploadComplete = (results) => {
+        console.log('Upload complete:', results);
+        // Reload files
+        loadFiles();
+        setShowUpload(false);
     };
 
     return (
@@ -615,10 +664,10 @@ const Gallery = () => {
                                 outline: 'none'
                             }}
                         >
-                            <option value="date-desc">최신순</option>
-                            <option value="date-asc">오래된순</option>
-                            <option value="name-asc">이름순 (A-Z)</option>
-                            <option value="name-desc">이름순 (Z-A)</option>
+                            <option value="latest">최신순</option>
+                            <option value="oldest">오래된순</option>
+                            <option value="name">이름순</option>
+                            <option value="size">크기순</option>
                         </select>
 
                         <div className="image-slider-container" style={{ display: 'none' }}>
@@ -627,30 +676,113 @@ const Gallery = () => {
 
                     <div style={{ display: 'flex', gap: '8px' }}>
                         {!isSelectionMode && (
-                            <button
-                                onClick={() => setIsSelectionMode(true)}
-                                style={{
-                                    padding: '6px 12px',
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 'var(--radius-full)',
-                                    fontSize: '12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <Check size={14} /> 선택
-                            </button>
+                            <>
+                                <button
+                                    onClick={() => setShowUpload(true)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        background: 'var(--primary)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: 'var(--radius-full)',
+                                        fontSize: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <UploadIcon size={14} /> 업로드
+                                </button>
+                                <button
+                                    onClick={() => setIsSelectionMode(true)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--radius-full)',
+                                        fontSize: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <Check size={14} /> 선택
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+                <div style={{
+                    padding: '12px',
+                    background: '#FEE2E2',
+                    border: '1px solid #FCA5A5',
+                    borderRadius: 'var(--radius-sm)',
+                    color: '#DC2626',
+                    marginBottom: '16px',
+                    fontSize: '14px'
+                }}>
+                    {error}
+                </div>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)'
+                }}>
+                    로딩 중...
+                </div>
+            )}
+
+            {/* Empty State */}
+            {!loading && files.length === 0 && (
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)',
+                    gap: '16px'
+                }}>
+                    <UploadIcon size={48} color="var(--text-tertiary)" />
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: '16px', marginBottom: '8px' }}>파일이 없습니다</p>
+                        <p style={{ fontSize: '14px' }}>파일을 업로드하여 시작하세요</p>
+                    </div>
+                    <button
+                        onClick={() => setShowUpload(true)}
+                        style={{
+                            padding: '10px 20px',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                        }}
+                    >
+                        첫 파일 업로드
+                    </button>
+                </div>
+            )}
+
             {/* Gallery Grid */}
-            <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
-                {Object.entries(groupedFiles).map(([date, files]) => (
+            {!loading && files.length > 0 && (
+                <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
+                    {Object.entries(groupedFiles).map(([date, files]) => (
                     <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
                         <h3 style={{
                             fontSize: '14px',
@@ -678,7 +810,16 @@ const Gallery = () => {
                         </div>
                     </div>
                 ))}
-            </div>
+                </div>
+            )}
+
+            {/* File Upload Modal */}
+            {showUpload && (
+                <FileUpload
+                    onUploadComplete={handleUploadComplete}
+                    onClose={() => setShowUpload(false)}
+                />
+            )}
 
             {/* Floating Action Bar for Selection Mode */}
             {isSelectionMode && (

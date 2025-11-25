@@ -36,10 +36,14 @@ const Login = () => {
         setError('');
 
         try {
+            console.log('Sending Google ID token to backend...');
+
             // Send ID token to backend
             const { data } = await client.post('/v0.1/auth/google/signin', {
                 idToken: response.credential
             });
+
+            console.log('Login successful, received tokens');
 
             // Store tokens
             setTokens(data.accessToken, data.refreshToken);
@@ -48,7 +52,28 @@ const Login = () => {
             navigate('/gallery');
         } catch (err) {
             console.error('Login failed:', err);
-            const errorMessage = err.response?.data?.message || '로그인에 실패했습니다. 다시 시도해주세요.';
+            console.error('Error response:', err.response);
+            console.error('Error response data:', err.response?.data);
+
+            // Enhanced error message extraction to handle nested error structures
+            let errorMessage = '로그인에 실패했습니다. 다시 시도해주세요.';
+
+            if (err.response?.data) {
+                // Try nested error.message first (backend standard format)
+                if (err.response.data.error?.message) {
+                    errorMessage = err.response.data.error.message;
+                }
+                // Fallback to direct message field
+                else if (err.response.data.message) {
+                    errorMessage = err.response.data.message;
+                }
+                // Handle 500 errors specifically
+                else if (err.response.status === 500) {
+                    errorMessage = '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+                    console.error('Server returned 500 error - possible backend configuration issue');
+                }
+            }
+
             setError(errorMessage);
         } finally {
             setIsLoading(false);
