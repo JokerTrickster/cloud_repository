@@ -3,7 +3,7 @@ import client from './client';
 
 /**
  * CloudRepository File API Client
- * Base URL: http://localhost:18080/api/v1
+ * Base URL: http://localhost:18080/api/v1 (via VITE_FILE_API_URL)
  *
  * 모든 요청에 Authorization 헤더 필요: Bearer {access_token}
  */
@@ -21,7 +21,9 @@ const fileApi = {
    * @returns {Promise<Object>} { file_id, upload_url, s3_key, expires_in }
    */
   async requestUploadUrl(fileInfo) {
-    const { data } = await client.post('/api/v1/files/upload', fileInfo);
+    const { data } = await client.post('/api/v1/files/upload', fileInfo, {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
     return data;
   },
 
@@ -36,7 +38,9 @@ const fileApi = {
     if (files.length > 30) {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
-    const { data } = await client.post('/api/v1/files/upload/batch', { files });
+    const { data } = await client.post('/api/v1/files/upload/batch', { files }, {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
     return data;
   },
 
@@ -148,7 +152,10 @@ const fileApi = {
    * @returns {Promise<Object>} { files, total_count, page, page_size }
    */
   async getFiles(params = {}) {
-    const { data } = await client.get('/api/v1/files', { params });
+    const { data } = await client.get('/api/v1/files', {
+      params,
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
     return data;
   },
 
@@ -160,7 +167,9 @@ const fileApi = {
    * @returns {Promise<Object>} { download_url, file_name, expires_in }
    */
   async getDownloadUrl(fileId) {
-    const { data } = await client.get(`/api/v1/files/${fileId}/download`);
+    const { data } = await client.get(`/api/v1/files/${fileId}/download`, {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
     return data;
   },
 
@@ -203,7 +212,9 @@ const fileApi = {
    * @returns {Promise<Object>} { message }
    */
   async deleteFile(fileId) {
-    const { data } = await client.delete(`/api/v1/files/${fileId}`);
+    const { data } = await client.delete(`/api/v1/files/${fileId}`, {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
     return data;
   },
 
