@@ -59,6 +59,23 @@ jobs:
         echo "📊 Build size:"
         du -sh dist
 
+    # 5.5. 환경 변수 디버깅 (보안상 값은 숨김)
+    - name: 🔍 Debug environment variables
+      run: |
+        echo "Checking VITE_GOOGLE_CLIENT_ID..."
+        if [ -n "${{ secrets.VITE_GOOGLE_CLIENT_ID }}" ]; then
+          echo "✅ VITE_GOOGLE_CLIENT_ID is set (length: ${#VITE_GOOGLE_CLIENT_ID})"
+        else
+          echo "❌ VITE_GOOGLE_CLIENT_ID is NOT set or empty"
+        fi
+        
+    # 5.6. SPA 라우팅을 위한 error.html 생성
+    - name: 📄 Create error.html for SPA routing
+      run: |
+        cp dist/index.html dist/error.html
+        echo "✅ Created dist/error.html from dist/index.html"
+
+
     # 6. 빌드 아티팩트 확인
     - name: 🔍 Check build artifacts
       run: |
