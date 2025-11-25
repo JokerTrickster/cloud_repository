@@ -86,7 +86,19 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      setErrors([error.response?.data?.error || error.message || '업로드에 실패했습니다.']);
+      let errorMessage = '업로드에 실패했습니다.';
+
+      if (error.response?.data?.error) {
+        if (typeof error.response.data.error === 'string') {
+          errorMessage = error.response.data.error;
+        } else if (error.response.data.error.message) {
+          errorMessage = error.response.data.error.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setErrors([errorMessage]);
     } finally {
       setUploading(false);
     }
