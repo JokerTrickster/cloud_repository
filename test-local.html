@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudBox 로컬 테스트</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .status:last-child { border-bottom: none; }
+        .online { color: #4CAF50; font-weight: bold; }
+        .offline { color: #f44336; font-weight: bold; }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #1976d2;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #1565c0; }
+        .test-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 CloudBox 로컬 테스트 대시보드</h1>
+
+    <div class="status-card">
+        <h2>서버 상태</h2>
+        <div class="status">
+            <span>프론트엔드 (5173)</span>
+            <span id="frontend-status">확인 중...</span>
+        </div>
+        <div class="status">
+            <span>파일 API (18080)</span>
+            <span id="file-api-status">확인 중...</span>
+        </div>
+        <div class="status">
+            <span>인증 API (18081)</span>
+            <span id="auth-api-status">확인 중...</span>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <h2>빠른 테스트</h2>
+        <div class="button-group">
+            <button onclick="openApp()">앱 열기</button>
+            <button onclick="setMockToken()">Mock 토큰 설정</button>
+            <button onclick="testFileAPI()">파일 API 테스트</button>
+            <button onclick="clearData()">데이터 초기화</button>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <h2>테스트 결과</h2>
+        <div id="test-results" class="test-section">
+            <p>테스트를 실행하면 여기에 결과가 표시됩니다.</p>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <h2>콘솔 명령어</h2>
+        <pre>// Mock 토큰 설정
+localStorage.setItem('access_token', 'test-token');
+
+// 파일 목록 조회
+fetch('/api/v1/files', {
+  headers: { 'Authorization': 'Bearer test-token' }
+}).then(r => r.json()).then(console.log);
+
+// Gallery 페이지 이동
+window.location.href = 'http://localhost:5173/gallery';</pre>
+    </div>
+
+    <script>
+        // 서버 상태 확인
+        async function checkServers() {
+            // 프론트엔드
+            try {
+                const res = await fetch('http://localhost:5173');
+                document.getElementById('frontend-status').innerHTML =
+                    '<span class="online">✅ 온라인</span>';
+            } catch (e) {
+                document.getElementById('frontend-status').innerHTML =
+                    '<span class="offline">❌ 오프라인</span>';
+            }
+
+            // 파일 API
+            try {
+                const res = await fetch('http://localhost:18080/api/v1/files', {
+                    headers: { 'Authorization': 'Bearer test' }
+                });
+                document.getElementById('file-api-status').innerHTML =
+                    res.ok ? '<span class="online">✅ 온라인</span>' :
+                    '<span class="offline">❌ 오프라인</span>';
+            } catch (e) {
+                document.getElementById('file-api-status').innerHTML =
+                    '<span class="offline">❌ 오프라인</span>';
+            }
+
+            // 인증 API
+            try {
+                const res = await fetch('http://localhost:18081/v0.1/auth/google/signin', {
+                    method: 'POST'
+                });
+                document.getElementById('auth-api-status').innerHTML =
+                    '<span class="online">✅ 온라인</span>';
+            } catch (e) {
+                document.getElementById('auth-api-status').innerHTML =
+                    '<span class="offline">❌ 오프라인</span>';
+            }
+        }
+
+        function openApp() {
+            window.open('http://localhost:5173', '_blank');
+        }
+
+        function setMockToken() {
+            localStorage.setItem('access_token', 'test-token-12345');
+            localStorage.setItem('refresh_token', 'refresh-token-12345');
+            document.getElementById('test-results').innerHTML =
+                '<p style="color: green;">✅ Mock 토큰이 설정되었습니다.</p>' +
+                '<p>이제 Gallery 페이지에 접근할 수 있습니다.</p>';
+        }
+
+        async function testFileAPI() {
+            document.getElementById('test-results').innerHTML =
+                '<p>파일 API 테스트 중...</p>';
+
+            try {
+                const response = await fetch('http://localhost:18080/api/v1/files', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('test-results').innerHTML =
+                        '<p style="color: green;">✅ API 연결 성공!</p>' +
+                        '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    document.getElementById('test-results').innerHTML =
+                        '<p style="color: orange;">⚠️ API 응답: ' + response.status + '</p>';
+                }
+            } catch (error) {
+                document.getElementById('test-results').innerHTML =
+                    '<p style="color: red;">❌ API 연결 실패</p>' +
+                    '<p>백엔드 서버가 실행 중인지 확인하세요.</p>';
+            }
+        }
+
+        function clearData() {
+            localStorage.clear();
+            document.getElementById('test-results').innerHTML =
+                '<p style="color: blue;">🔄 모든 로컬 데이터가 초기화되었습니다.</p>';
+        }
+
+        // 페이지 로드 시 서버 상태 확인
+        checkServers();
+        setInterval(checkServers, 5000); // 5초마다 확인
+    </script>
+</body>
+</html>
