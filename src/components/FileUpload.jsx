@@ -45,9 +45,21 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
 
   const removeFile = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+
+    // 태그도 인덱스 재정렬 (파일 삭제 시 인덱스 불일치 방지)
     setFileTags(prev => {
-      const newTags = { ...prev };
-      delete newTags[index];
+      const newTags = {};
+      Object.keys(prev).forEach(key => {
+        const oldIndex = parseInt(key);
+        if (oldIndex < index) {
+          // 삭제된 파일 이전 인덱스는 그대로
+          newTags[oldIndex] = prev[oldIndex];
+        } else if (oldIndex > index) {
+          // 삭제된 파일 이후 인덱스는 -1 (재정렬)
+          newTags[oldIndex - 1] = prev[oldIndex];
+        }
+        // oldIndex === index인 경우는 삭제
+      });
       return newTags;
     });
   };

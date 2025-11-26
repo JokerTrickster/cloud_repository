@@ -340,6 +340,7 @@ const Gallery = () => {
                 type: file.file_type,
                 date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
                 tags: file.tags ? file.tags.map(t => t.name) : [],
+                duration: file.duration || null, // 비디오 길이 (초)
                 size: file.file_size,
                 created_at: file.created_at,
             }));
