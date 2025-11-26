@@ -184,8 +184,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     {file.duration && (
                         <div style={{
                             position: 'absolute',
-                            bottom: '8px',
-                            right: '8px',
+                            top: '8px',
+                            left: '8px',
                             background: 'rgba(0,0,0,0.7)',
                             color: 'white',
                             padding: '2px 6px',
