@@ -100,19 +100,21 @@ const fileApi = {
    *
    * @param {Array<File>} files - 업로드할 파일 배열 (최대 30개)
    * @param {Function} onProgress - 진행률 콜백 (fileIndex, progress)
+   * @param {Object} fileTags - 파일별 태그 정보 { fileIndex: { tags: [string] } }
    * @returns {Promise<Array>} 업로드 결과 배열
    */
-  async uploadBatchFiles(files, onProgress) {
+  async uploadBatchFiles(files, onProgress, fileTags = {}) {
     if (files.length > 30) {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
-    // 1. 배치 업로드 URL 요청
-    const fileInfos = files.map(file => ({
+    // 1. 배치 업로드 URL 요청 (태그 포함)
+    const fileInfos = files.map((file, index) => ({
       file_name: file.name,
       content_type: file.type,
       file_type: file.type.startsWith('image/') ? 'image' : 'video',
       file_size: file.size,
+      tags: fileTags[index]?.tags || [], // 태그 추가
     }));
 
     const batchResponse = await this.requestBatchUploadUrl(fileInfos);

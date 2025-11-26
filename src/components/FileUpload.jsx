@@ -4,6 +4,7 @@ import fileApi, { fileValidation } from '../api/fileApi';
 
 const FileUpload = ({ onUploadComplete, onClose }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileTags, setFileTags] = useState({}); // { fileIndex: [tags] }
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [errors, setErrors] = useState([]);
@@ -44,6 +45,77 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
 
   const removeFile = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setFileTags(prev => {
+      const newTags = { ...prev };
+      delete newTags[index];
+      return newTags;
+    });
+  };
+
+  const handleTagInput = (index, value) => {
+    // 쉼표나 엔터로 태그 추가
+    if (value.endsWith(',') || value.endsWith(' ')) {
+      const tag = value.slice(0, -1).trim();
+      if (tag) {
+        addTag(index, tag);
+      }
+    } else {
+      setFileTags(prev => ({
+        ...prev,
+        [index]: { ...prev[index], input: value }
+      }));
+    }
+  };
+
+  const handleTagKeyDown = (index, e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const input = fileTags[index]?.input || '';
+      const tag = input.trim();
+      if (tag) {
+        addTag(index, tag);
+      }
+    } else if (e.key === 'Backspace' && (!fileTags[index]?.input || fileTags[index]?.input === '')) {
+      // 입력이 비어있을 때 백스페이스 누르면 마지막 태그 삭제
+      const tags = fileTags[index]?.tags || [];
+      if (tags.length > 0) {
+        setFileTags(prev => ({
+          ...prev,
+          [index]: {
+            ...prev[index],
+            tags: tags.slice(0, -1)
+          }
+        }));
+      }
+    }
+  };
+
+  const addTag = (index, tag) => {
+    const currentTags = fileTags[index]?.tags || [];
+    if (!currentTags.includes(tag)) {
+      setFileTags(prev => ({
+        ...prev,
+        [index]: {
+          tags: [...currentTags, tag],
+          input: ''
+        }
+      }));
+    } else {
+      setFileTags(prev => ({
+        ...prev,
+        [index]: { ...prev[index], input: '' }
+      }));
+    }
+  };
+
+  const removeTag = (index, tagToRemove) => {
+    setFileTags(prev => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        tags: (prev[index]?.tags || []).filter(tag => tag !== tagToRemove)
+      }
+    }));
   };
 
   const formatFileSize = (bytes) => {
@@ -61,7 +133,7 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
     setErrors([]);
 
     try {
-      // 배치 업로드
+      // 배치 업로드 (태그 포함)
       const results = await fileApi.uploadBatchFiles(
         selectedFiles,
         (fileIndex, progress) => {
@@ -69,7 +141,8 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
             ...prev,
             [fileIndex]: progress,
           }));
-        }
+        },
+        fileTags // 태그 정보 전달
       );
 
       // 업로드 완료
@@ -302,6 +375,62 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
                               background: isCompleted ? '#4CAF50' : 'var(--primary)',
                               transition: 'width 0.3s'
                             }} />
+                          </div>
+                        )}
+
+                        {/* Tags Input */}
+                        {!uploading && (
+                          <div style={{ marginTop: '8px' }}>
+                            <div style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '4px',
+                              padding: '6px',
+                              background: 'var(--surface)',
+                              borderRadius: 'var(--radius-sm)',
+                              border: '1px solid var(--border)',
+                              minHeight: '32px',
+                              alignItems: 'center'
+                            }}>
+                              {(fileTags[index]?.tags || []).map((tag, tagIndex) => (
+                                <span
+                                  key={tagIndex}
+                                  style={{
+                                    background: 'var(--primary)',
+                                    color: 'white',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  #{tag}
+                                  <X
+                                    size={12}
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => removeTag(index, tag)}
+                                  />
+                                </span>
+                              ))}
+                              <input
+                                type="text"
+                                value={fileTags[index]?.input || ''}
+                                onChange={(e) => handleTagInput(index, e.target.value)}
+                                onKeyDown={(e) => handleTagKeyDown(index, e)}
+                                placeholder={(fileTags[index]?.tags || []).length === 0 ? '태그 입력 (쉼표로 구분)' : ''}
+                                style={{
+                                  flex: 1,
+                                  minWidth: '100px',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                  fontSize: '12px',
+                                  padding: '2px'
+                                }}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
