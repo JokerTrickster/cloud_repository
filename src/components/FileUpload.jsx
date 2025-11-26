@@ -232,27 +232,76 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
         {/* Header */}
         <div style={{
           padding: '20px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          borderBottom: '1px solid var(--border)'
         }}>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
-            파일 업로드
-          </h2>
-          <button
-            onClick={onClose}
-            disabled={uploading}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              padding: '4px',
-              opacity: uploading ? 0.5 : 1
-            }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: uploading ? '16px' : 0
+          }}>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+              파일 업로드
+            </h2>
+            <button
+              onClick={onClose}
+              disabled={uploading}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                padding: '4px',
+                opacity: uploading ? 0.5 : 1
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Overall Progress Bar */}
+          {uploading && selectedFiles.length > 0 && (
+            <div style={{ marginTop: '12px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '8px'
+              }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  전체 진행률
+                </span>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--primary)' }}>
+                  {Math.round(
+                    Object.values(uploadProgress).reduce((sum, val) => sum + val, 0) / selectedFiles.length || 0
+                  )}%
+                </span>
+              </div>
+              <div style={{
+                height: '8px',
+                background: '#e0e0e0',
+                borderRadius: '4px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${
+                    Object.values(uploadProgress).reduce((sum, val) => sum + val, 0) / selectedFiles.length || 0
+                  }%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, var(--primary) 0%, #4f9cf9 100%)',
+                  transition: 'width 0.3s ease',
+                  borderRadius: '4px'
+                }} />
+              </div>
+              <div style={{
+                marginTop: '6px',
+                fontSize: '11px',
+                color: 'var(--text-secondary)',
+                textAlign: 'center'
+              }}>
+                {Object.values(uploadProgress).filter(p => p === 100).length} / {selectedFiles.length} 파일 완료
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content */}

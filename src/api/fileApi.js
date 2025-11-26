@@ -148,18 +148,25 @@ const fileApi = {
 
       // 태그와 duration은 서버가 지원하는 경우에만 포함
       const tags = fileTags[index]?.tags || [];
+      console.log(`[File ${index}] Tags from fileTags:`, tags);
       if (tags.length > 0) {
         info.tags = tags;
+        console.log(`[File ${index}] Tags added to request:`, info.tags);
+      } else {
+        console.log(`[File ${index}] No tags to add`);
       }
 
       if (durations[index]) {
         info.duration = durations[index];
+        console.log(`[File ${index}] Duration:`, info.duration);
       }
 
       return info;
     });
 
+    console.log('📤 Sending batch upload request:', JSON.stringify(fileInfos, null, 2));
     const batchResponse = await this.requestBatchUploadUrl(fileInfos);
+    console.log('✅ Batch upload response:', batchResponse);
 
     // 2. 각 파일을 S3에 업로드 (원본 + 썸네일)
     const uploadPromises = batchResponse.results.map(async (result, index) => {
