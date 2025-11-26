@@ -269,6 +269,34 @@ const fileApi = {
     );
     return Promise.all(deletePromises);
   },
+
+  /**
+   * 6. 사용자 통계 조회
+   * GET /api/v1/user/stats
+   *
+   * @returns {Promise<Object>} { storage: { used, total, percentage }, monthlyStats: { uploads, downloads, tagsCreated } }
+   */
+  async getUserStats() {
+    const { data } = await client.get('/api/v1/user/stats', {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
+    return data;
+  },
+
+  /**
+   * 7. 활동 내역 조회
+   * GET /api/v1/user/activity
+   *
+   * @param {string} month - 조회할 년월 (형식: YYYY-MM)
+   * @returns {Promise<Object>} { "2025-11-26": { uploads, downloads, tags }, ... }
+   */
+  async getActivity(month) {
+    const { data } = await client.get('/api/v1/user/activity', {
+      params: { month },
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
+    return data;
+  },
 };
 
 /**
