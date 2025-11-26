@@ -1,9 +1,9 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useEffect } from 'react';
 import { PieChart, HardDrive, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ArrowDown, ArrowUp } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { ACTIVITY_DATA } from '../data/mockData';
+import fileApi from '../api/fileApi';
 
 // Memoized Day Cell Component
 const DayCell = memo(({ date, activity, isToday, onClick }) => (
@@ -94,8 +94,10 @@ const DayCell = memo(({ date, activity, isToday, onClick }) => (
 ));
 
 const MyPage = () => {
-    const storageUsed = 75; // Percentage
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [stats, setStats] = useState(null);
+    const [activityData, setActivityData] = useState({});
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     const daysInMonth = eachDayOfInterval({
@@ -109,6 +111,37 @@ const MyPage = () => {
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
+    // Fetch user stats (once on mount)
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const data = await fileApi.getUserStats();
+                setStats(data);
+            } catch (error) {
+                console.error('Failed to fetch user stats:', error);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    // Fetch activity data when month changes
+    useEffect(() => {
+        const fetchActivity = async () => {
+            setLoading(true);
+            try {
+                const month = format(currentDate, 'yyyy-MM');
+                const data = await fileApi.getActivity(month);
+                setActivityData(data);
+            } catch (error) {
+                console.error('Failed to fetch activity data:', error);
+                setActivityData({});
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchActivity();
+    }, [currentDate]);
+
     return (
         <div style={{ padding: '16px', maxWidth: '100%', margin: '0 auto', paddingBottom: '80px' }}>
             <style>{`
@@ -117,7 +150,7 @@ const MyPage = () => {
                     display: grid;
                     grid-template-columns: repeat(7, 1fr);
                     gap: 12px;
-                    grid-auto-rows: 0;
+                    grid-auto-rows: auto;
                 }
                 .day-cell {
                     aspect-ratio: 1;
@@ -207,14 +240,20 @@ const MyPage = () => {
                         </div>
                         <div>
                             <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>저장 공간</h3>
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>총 15GB 제공</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                총 {stats ? (stats.storage.total / 1024 / 1024 / 1024).toFixed(0) : '15'}GB 제공
+                            </span>
                         </div>
                     </div>
 
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: '600' }}>
-                            <span style={{ color: 'var(--text-primary)' }}>11.25GB</span>
-                            <span style={{ color: 'var(--primary)' }}>{storageUsed}%</span>
+                            <span style={{ color: 'var(--text-primary)' }}>
+                                {stats ? (stats.storage.used / 1024 / 1024).toFixed(2) : '0.00'}MB
+                            </span>
+                            <span style={{ color: 'var(--primary)' }}>
+                                {stats ? (stats.storage.percentage * 100).toFixed(4) : '0.00'}%
+                            </span>
                         </div>
                         <div style={{
                             width: '100%',
@@ -224,7 +263,7 @@ const MyPage = () => {
                             overflow: 'hidden'
                         }}>
                             <div style={{
-                                width: `${storageUsed}%`,
+                                width: `${stats ? stats.storage.percentage * 100 : 0}%`,
                                 height: '100%',
                                 background: 'linear-gradient(90deg, var(--primary), #34A853)',
                                 borderRadius: '100px'
@@ -252,9 +291,9 @@ const MyPage = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'space-around' }}>
                         {[
-                            { label: '업로드', value: 128, color: 'var(--primary)' },
-                            { label: '다운로드', value: 45, color: '#EA4335' },
-                            { label: '태그', value: 12, color: '#FBBC04' }
+                            { label: '업로드', value: stats?.monthlyStats.uploads || 0, color: 'var(--primary)' },
+                            { label: '다운로드', value: stats?.monthlyStats.downloads || 0, color: '#EA4335' },
+                            { label: '태그', value: stats?.monthlyStats.tagsCreated || 0, color: '#FBBC04' }
                         ].map((item, i) => (
                             <div key={i} style={{ textAlign: 'center' }}>
                                 <div style={{ fontSize: '24px', fontWeight: '800', color: item.color, marginBottom: '2px' }}>
@@ -331,7 +370,7 @@ const MyPage = () => {
                             <DayCell
                                 key={dateKey}
                                 date={date}
-                                activity={ACTIVITY_DATA[dateKey]}
+                                activity={activityData[dateKey]}
                                 isToday={isSameDay(date, new Date())}
                                 onClick={() => navigate(`/gallery?date=${dateKey}`)}
                             />

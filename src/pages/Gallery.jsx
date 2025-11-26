@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, memo } from 'react';
+import React, { useState, useMemo, useEffect, memo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
@@ -6,35 +6,99 @@ import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
 
-// Memoized Gallery Item Component
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm }) => (
-    <div
-        onClick={() => isSelectionMode && onToggle(file.id)}
-        style={{
-            position: 'relative',
-            paddingBottom: '100%',
-            borderRadius: 'var(--radius-sm)',
-            overflow: 'hidden',
-            background: '#eee',
-            cursor: isSelectionMode ? 'pointer' : 'default',
-            border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none'
-        }}
-    >
-        <img
-            src={file.url}
-            alt={file.name}
+// Memoized Gallery Item Component with Lazy Loading
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const imgRef = useRef(null);
+
+    useEffect(() => {
+        // Intersection Observer for lazy loading with preload margin
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && imgRef.current) {
+                        // Start loading the image
+                        const img = imgRef.current;
+                        if (!img.src || img.src.includes('data:image')) {
+                            img.src = file.url;
+                        }
+                    }
+                });
+            },
+            {
+                rootMargin: '50px', // Load images 50px before they enter viewport
+                threshold: 0.01
+            }
+        );
+
+        if (imgRef.current) {
+            observer.observe(imgRef.current);
+        }
+
+        return () => {
+            if (imgRef.current) {
+                observer.unobserve(imgRef.current);
+            }
+        };
+    }, [file.url]);
+
+    const handleLoad = () => {
+        setIsLoaded(true);
+        if (onLoad) onLoad();
+    };
+
+    return (
+        <div
+            onClick={() => isSelectionMode && onToggle(file.id)}
             style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transition: 'transform 0.2s',
-                opacity: isSelectionMode && isSelected ? 0.7 : 1
+                position: 'relative',
+                paddingBottom: '100%',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                background: '#eee',
+                cursor: isSelectionMode ? 'pointer' : 'default',
+                border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none'
             }}
-            loading="lazy"
-        />
+        >
+            {/* Loading Placeholder */}
+            {!isLoaded && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 1.5s infinite'
+                }} />
+            )}
+
+            <img
+                ref={imgRef}
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" // 1px transparent placeholder
+                alt={file.name}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'opacity 0.3s ease-in-out',
+                    opacity: isLoaded ? (isSelectionMode && isSelected ? 0.7 : 1) : 0
+                }}
+                loading="lazy"
+                decoding="async"
+                fetchpriority={index < 6 ? 'high' : 'low'}
+                onLoad={handleLoad}
+                onError={(e) => {
+                    // Fallback to original URL on error
+                    if (!e.target.src.includes(file.url)) {
+                        e.target.src = file.url;
+                    }
+                }}
+            />
 
         {/* Video Indicator & Duration */}
         {file.type === 'video' && (
@@ -144,6 +208,12 @@ const Gallery = () => {
     const [showUpload, setShowUpload] = useState(false);
     const [error, setError] = useState('');
 
+    // Performance Measurement Refs
+    const loadStartTime = useRef(0);
+    const loadedImagesCount = useRef(0);
+    const totalImagesToLoad = useRef(0);
+    const apiEndTime = useRef(0);
+
     // Load files from API
     useEffect(() => {
         loadFiles();
@@ -168,6 +238,15 @@ const Gallery = () => {
     const loadFiles = async () => {
         setLoading(true);
         setError('');
+
+        // Reset performance metrics
+        loadStartTime.current = performance.now();
+        loadedImagesCount.current = 0;
+        totalImagesToLoad.current = 0;
+        apiEndTime.current = 0;
+
+        console.time('Gallery Load');
+
         try {
             const params = {
                 file_type: filterType === 'all' ? undefined : filterType,
@@ -184,7 +263,10 @@ const Gallery = () => {
             const transformedFiles = result.files.map(file => ({
                 id: file.id,
                 name: file.file_name,
-                url: file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
+                // 목록에서는 썸네일 우선 사용 (빠른 로딩)
+                url: file.thumbnail_url || file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
+                // 원본 URL은 별도로 저장 (상세보기용)
+                originalUrl: file.download_url || file.url,
                 type: file.file_type,
                 date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
                 tags: file.tags ? file.tags.map(t => t.name) : [],
@@ -193,6 +275,16 @@ const Gallery = () => {
             }));
 
             setFiles(transformedFiles);
+
+            apiEndTime.current = performance.now();
+            totalImagesToLoad.current = transformedFiles.length;
+
+            if (transformedFiles.length === 0) {
+                console.timeEnd('Gallery Load');
+                const totalTime = apiEndTime.current - loadStartTime.current;
+                console.log(`[Performance] No files to load. Total time: ${totalTime.toFixed(2)}ms`);
+            }
+
 
             // Extract unique tags
             const allTags = new Set();
@@ -361,6 +453,27 @@ const Gallery = () => {
         setShowUpload(false);
     };
 
+    const handleImageLoad = () => {
+        loadedImagesCount.current += 1;
+
+        if (loadedImagesCount.current === totalImagesToLoad.current && totalImagesToLoad.current > 0) {
+            const endTime = performance.now();
+            const totalTime = endTime - loadStartTime.current;
+            const apiTime = apiEndTime.current - loadStartTime.current;
+            const renderTime = endTime - apiEndTime.current;
+
+            console.timeEnd('Gallery Load');
+            console.log(`[Performance] All ${totalImagesToLoad.current} images loaded.`);
+            console.log(`[Performance] Total Time: ${totalTime.toFixed(2)}ms`);
+            console.log(`[Performance] API Latency: ${apiTime.toFixed(2)}ms`);
+            console.log(`[Performance] Image Rendering Time: ${renderTime.toFixed(2)}ms`);
+
+            // Optional: Show a toast or alert if needed, but console is cleaner for now.
+            // alert(`Performance: Total ${totalTime.toFixed(0)}ms (API: ${apiTime.toFixed(0)}ms, Render: ${renderTime.toFixed(0)}ms)`);
+        }
+    };
+
+
     return (
         <div style={{ padding: '16px', height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: '80px' }}>
             <style>{`
@@ -406,6 +519,12 @@ const Gallery = () => {
             font-size: 12px;
             padding: 6px 12px;
           }
+        }
+
+        /* Shimmer loading animation */
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
         }
       `}</style>
 
@@ -783,33 +902,39 @@ const Gallery = () => {
             {!loading && files.length > 0 && (
                 <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
                     {Object.entries(groupedFiles).map(([date, files]) => (
-                    <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
-                        <h3 style={{
-                            fontSize: '14px',
-                            marginBottom: '8px',
-                            color: 'var(--text-secondary)',
-                            position: 'sticky',
-                            top: 0,
-                            background: 'var(--background)',
-                            padding: '8px 0',
-                            zIndex: 10
-                        }}>
-                            {format(parseISO(date), 'yyyy년 M월 d일', { locale: ko })}
-                        </h3>
-                        <div className="gallery-grid">
-                            {files.map((file) => (
-                                <GalleryItem
-                                    key={file.id}
-                                    file={file}
-                                    isSelectionMode={isSelectionMode}
-                                    isSelected={selectedFiles.includes(file.id)}
-                                    onToggle={toggleSelection}
-                                    searchTerm={searchTerm}
-                                />
-                            ))}
+                        <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
+                            <h3 style={{
+                                fontSize: '14px',
+                                marginBottom: '8px',
+                                color: 'var(--text-secondary)',
+                                position: 'sticky',
+                                top: 0,
+                                background: 'var(--background)',
+                                padding: '8px 0',
+                                zIndex: 10
+                            }}>
+                                {format(parseISO(date), 'yyyy년 M월 d일', { locale: ko })}
+                            </h3>
+                            <div className="gallery-grid">
+                                {files.map((file, idx) => {
+                                    // Calculate absolute index across all files for fetchpriority
+                                    const absoluteIndex = filteredFiles.findIndex(f => f.id === file.id);
+                                    return (
+                                        <GalleryItem
+                                            key={file.id}
+                                            file={file}
+                                            isSelectionMode={isSelectionMode}
+                                            isSelected={selectedFiles.includes(file.id)}
+                                            onToggle={toggleSelection}
+                                            searchTerm={searchTerm}
+                                            onLoad={handleImageLoad}
+                                            index={absoluteIndex}
+                                        />
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
                 </div>
             )}
 

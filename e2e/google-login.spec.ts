@@ -11,6 +11,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 const GOOGLE_EMAIL = process.env.TEST_GOOGLE_EMAIL;
 const GOOGLE_PASSWORD = process.env.TEST_GOOGLE_PASSWORD;
 
+test.skip(!GOOGLE_EMAIL || !GOOGLE_PASSWORD, 'Skipping Google login test - credentials not provided');
+
 test('Google login redirects to gallery and stores tokens', async ({ page }) => {
     // Navigate to login page
     await page.goto(`${BASE_URL}/login`);
