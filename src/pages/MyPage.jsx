@@ -227,7 +227,7 @@ const MyPage = () => {
 
             {/* Stats Row - Scrollable on mobile if needed, or stacked */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                {/* Storage Card */}
+                {/* Storage & File Stats Card */}
                 <div style={{
                     background: 'white',
                     padding: '20px',
@@ -241,33 +241,58 @@ const MyPage = () => {
                         <div>
                             <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>저장 공간</h3>
                             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                총 {stats ? (stats.storage.total / 1024 / 1024 / 1024).toFixed(0) : '15'}GB 제공
+                                사용 중인 공간
                             </span>
                         </div>
                     </div>
 
                     <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: '600' }}>
-                            <span style={{ color: 'var(--text-primary)' }}>
-                                {stats ? (stats.storage.used / 1024 / 1024).toFixed(2) : '0.00'}MB
-                            </span>
-                            <span style={{ color: 'var(--primary)' }}>
-                                {stats ? (stats.storage.percentage * 100).toFixed(4) : '0.00'}%
-                            </span>
-                        </div>
+                        {/* Used Space */}
                         <div style={{
-                            width: '100%',
-                            height: '8px',
-                            background: '#F1F3F4',
-                            borderRadius: '100px',
-                            overflow: 'hidden'
+                            fontSize: '28px',
+                            fontWeight: '700',
+                            color: 'var(--primary)',
+                            marginBottom: '16px'
+                        }}>
+                            {stats ? (
+                                stats.storage.used >= 1024 * 1024 * 1024
+                                    ? `${(stats.storage.used / 1024 / 1024 / 1024).toFixed(2)} GB`
+                                    : `${(stats.storage.used / 1024 / 1024).toFixed(2)} MB`
+                            ) : '0.00 MB'}
+                        </div>
+
+                        {/* File Counts */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '12px'
                         }}>
                             <div style={{
-                                width: `${stats ? stats.storage.percentage * 100 : 0}%`,
-                                height: '100%',
-                                background: 'linear-gradient(90deg, var(--primary), #34A853)',
-                                borderRadius: '100px'
-                            }} />
+                                padding: '12px',
+                                background: 'rgba(26, 115, 232, 0.05)',
+                                borderRadius: '12px'
+                            }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                                    총 업로드
+                                </div>
+                                <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                    {stats?.monthlyStats?.uploads || 0}
+                                    <span style={{ fontSize: '12px', fontWeight: '500', marginLeft: '2px' }}>개</span>
+                                </div>
+                            </div>
+                            <div style={{
+                                padding: '12px',
+                                background: 'rgba(52, 168, 83, 0.05)',
+                                borderRadius: '12px'
+                            }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                                    총 다운로드
+                                </div>
+                                <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                    {stats?.monthlyStats?.downloads || 0}
+                                    <span style={{ fontSize: '12px', fontWeight: '500', marginLeft: '2px' }}>회</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
