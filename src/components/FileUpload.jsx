@@ -260,27 +260,44 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
 
           {/* Overall Progress Bar */}
           {uploading && selectedFiles.length > 0 && (
-            <div style={{ marginTop: '12px' }}>
+            <div style={{
+              marginTop: '12px',
+              padding: '16px',
+              background: 'linear-gradient(135deg, rgba(26, 115, 232, 0.05) 0%, rgba(79, 156, 249, 0.05) 100%)',
+              borderRadius: '12px',
+              border: '1px solid rgba(26, 115, 232, 0.1)'
+            }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '8px'
+                marginBottom: '12px'
               }}>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                  전체 진행률
-                </span>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--primary)' }}>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    업로드 진행 중
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {Object.values(uploadProgress).filter(p => p === 100).length} / {selectedFiles.length} 파일 완료
+                  </div>
+                </div>
+                <div style={{
+                  fontSize: '28px',
+                  fontWeight: '800',
+                  color: 'var(--primary)',
+                  lineHeight: 1
+                }}>
                   {Math.round(
                     Object.values(uploadProgress).reduce((sum, val) => sum + val, 0) / selectedFiles.length || 0
                   )}%
-                </span>
+                </div>
               </div>
               <div style={{
-                height: '8px',
-                background: '#e0e0e0',
-                borderRadius: '4px',
-                overflow: 'hidden'
+                height: '12px',
+                background: 'rgba(0,0,0,0.08)',
+                borderRadius: '6px',
+                overflow: 'hidden',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
               }}>
                 <div style={{
                   width: `${
@@ -289,16 +306,9 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
                   height: '100%',
                   background: 'linear-gradient(90deg, var(--primary) 0%, #4f9cf9 100%)',
                   transition: 'width 0.3s ease',
-                  borderRadius: '4px'
+                  borderRadius: '6px',
+                  boxShadow: '0 2px 4px rgba(26, 115, 232, 0.3)'
                 }} />
-              </div>
-              <div style={{
-                marginTop: '6px',
-                fontSize: '11px',
-                color: 'var(--text-secondary)',
-                textAlign: 'center'
-              }}>
-                {Object.values(uploadProgress).filter(p => p === 100).length} / {selectedFiles.length} 파일 완료
               </div>
             </div>
           )}
@@ -431,8 +441,12 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
                         }}>
                           <span>{formatFileSize(file.size)}</span>
                           {uploading && (
-                            <span style={{ color: 'var(--primary)' }}>
-                              {progress}%
+                            <span style={{
+                              color: isCompleted ? '#4CAF50' : 'var(--primary)',
+                              fontWeight: '700',
+                              fontSize: '13px'
+                            }}>
+                              {isCompleted ? '✓ 완료' : `${progress}%`}
                             </span>
                           )}
                         </div>
@@ -441,16 +455,20 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
                         {uploading && (
                           <div style={{
                             marginTop: '8px',
-                            height: '4px',
+                            height: '6px',
                             background: '#e0e0e0',
-                            borderRadius: '2px',
-                            overflow: 'hidden'
+                            borderRadius: '3px',
+                            overflow: 'hidden',
+                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
                           }}>
                             <div style={{
                               width: `${progress}%`,
                               height: '100%',
-                              background: isCompleted ? '#4CAF50' : 'var(--primary)',
-                              transition: 'width 0.3s'
+                              background: isCompleted
+                                ? 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%)'
+                                : 'linear-gradient(90deg, var(--primary) 0%, #4f9cf9 100%)',
+                              transition: 'width 0.3s ease',
+                              boxShadow: isCompleted ? '0 1px 3px rgba(76, 175, 80, 0.3)' : '0 1px 3px rgba(26, 115, 232, 0.3)'
                             }} />
                           </div>
                         )}

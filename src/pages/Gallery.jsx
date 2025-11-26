@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, memo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon } from 'lucide-react';
+import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
@@ -74,12 +74,16 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     onToggle(file.id);
                 } else if (file.type === 'video') {
                     e.stopPropagation();
+                    // Reset hover state before opening modal
+                    setIsHovered(false);
                     // Open video player
                     if (window.openVideoPlayer) {
                         window.openVideoPlayer(file);
                     }
                 } else if (file.type === 'image') {
                     e.stopPropagation();
+                    // Reset hover state before opening modal
+                    setIsHovered(false);
                     // Open image viewer
                     if (window.openImageViewer) {
                         window.openImageViewer(file);
@@ -517,6 +521,7 @@ const Gallery = () => {
         };
     }, []);
 
+
     const handleDelete = async () => {
         if (window.confirm(`${selectedFiles.length}개의 파일을 삭제하시겠습니까?`)) {
             try {
@@ -537,6 +542,56 @@ const Gallery = () => {
         // Reload files
         loadFiles();
         setShowUpload(false);
+    };
+
+    // Web Share API - 모바일에서 사진/동영상 공유
+    const handleShare = async (file) => {
+        try {
+            // Check if Web Share API is supported
+            if (!navigator.share) {
+                alert('이 브라우저는 공유 기능을 지원하지 않습니다.');
+                return;
+            }
+
+            // Fetch the file as blob
+            const response = await fetch(file.originalUrl || file.url);
+            const blob = await response.blob();
+
+            // Create File object
+            const fileExtension = file.name.split('.').pop();
+            const fileName = file.name || `file.${fileExtension}`;
+            const shareFile = new File([blob], fileName, { type: blob.type });
+
+            // Check if files can be shared
+            if (navigator.canShare && !navigator.canShare({ files: [shareFile] })) {
+                alert('이 파일은 공유할 수 없습니다.');
+                return;
+            }
+
+            // Share
+            await navigator.share({
+                files: [shareFile],
+                title: file.name,
+                text: `${file.name} 공유`
+            });
+
+        } catch (error) {
+            // User cancelled or error occurred
+            if (error.name !== 'AbortError') {
+                console.error('Share failed:', error);
+                alert('공유에 실패했습니다.');
+            }
+        }
+    };
+
+    // Download file (fallback for desktop)
+    const handleDownloadFile = async (file) => {
+        try {
+            await fileApi.downloadFile(file.id, file.name);
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert('다운로드에 실패했습니다.');
+        }
     };
 
     const handleImageLoad = () => {
@@ -1150,22 +1205,75 @@ const Gallery = () => {
                             position: 'relative'
                         }}
                     >
-                        <button
-                            onClick={() => setPlayingVideo(null)}
-                            style={{
-                                position: 'absolute',
-                                top: '-40px',
-                                right: '0',
-                                background: 'none',
-                                border: 'none',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '24px',
-                                padding: '8px'
-                            }}
-                        >
-                            <X size={32} />
-                        </button>
+                        {/* Action Buttons */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '-40px',
+                            right: '0',
+                            display: 'flex',
+                            gap: '8px',
+                            alignItems: 'center'
+                        }}>
+                            {/* Share Button (Mobile) */}
+                            {navigator.share && (
+                                <button
+                                    onClick={() => handleShare(playingVideo)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <Share2 size={18} />
+                                    공유
+                                </button>
+                            )}
+                            {/* Download Button (Desktop) */}
+                            {!navigator.share && (
+                                <button
+                                    onClick={() => handleDownloadFile(playingVideo)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <Download size={18} />
+                                    다운로드
+                                </button>
+                            )}
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setPlayingVideo(null)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    padding: '8px'
+                                }}
+                            >
+                                <X size={28} />
+                            </button>
+                        </div>
                         <video
                             src={playingVideo.originalUrl || playingVideo.url}
                             controls
@@ -1209,26 +1317,79 @@ const Gallery = () => {
                             position: 'relative'
                         }}
                     >
-                        <button
-                            onClick={() => {
-                                setViewingImage(null);
-                                setImageLoading(true);
-                            }}
-                            style={{
-                                position: 'absolute',
-                                top: '-40px',
-                                right: '0',
-                                background: 'none',
-                                border: 'none',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '24px',
-                                padding: '8px',
-                                zIndex: 10
-                            }}
-                        >
-                            <X size={32} />
-                        </button>
+                        {/* Action Buttons */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '-40px',
+                            right: '0',
+                            display: 'flex',
+                            gap: '8px',
+                            alignItems: 'center',
+                            zIndex: 10
+                        }}>
+                            {/* Share Button (Mobile) */}
+                            {navigator.share && (
+                                <button
+                                    onClick={() => handleShare(viewingImage)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <Share2 size={18} />
+                                    공유
+                                </button>
+                            )}
+                            {/* Download Button (Desktop) */}
+                            {!navigator.share && (
+                                <button
+                                    onClick={() => handleDownloadFile(viewingImage)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    <Download size={18} />
+                                    다운로드
+                                </button>
+                            )}
+                            {/* Close Button */}
+                            <button
+                                onClick={() => {
+                                    setViewingImage(null);
+                                    setImageLoading(true);
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    padding: '8px'
+                                }}
+                            >
+                                <X size={28} />
+                            </button>
+                        </div>
 
                         {/* Thumbnail placeholder (shows immediately) */}
                         {imageLoading && (
