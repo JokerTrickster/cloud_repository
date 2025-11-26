@@ -6,36 +6,99 @@ import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
 
-// Memoized Gallery Item Component
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad }) => (
-    <div
-        onClick={() => isSelectionMode && onToggle(file.id)}
-        style={{
-            position: 'relative',
-            paddingBottom: '100%',
-            borderRadius: 'var(--radius-sm)',
-            overflow: 'hidden',
-            background: '#eee',
-            cursor: isSelectionMode ? 'pointer' : 'default',
-            border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none'
-        }}
-    >
-        <img
-            src={file.url}
-            alt={file.name}
+// Memoized Gallery Item Component with Lazy Loading
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const imgRef = useRef(null);
+
+    useEffect(() => {
+        // Intersection Observer for lazy loading with preload margin
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && imgRef.current) {
+                        // Start loading the image
+                        const img = imgRef.current;
+                        if (!img.src || img.src.includes('data:image')) {
+                            img.src = file.url;
+                        }
+                    }
+                });
+            },
+            {
+                rootMargin: '50px', // Load images 50px before they enter viewport
+                threshold: 0.01
+            }
+        );
+
+        if (imgRef.current) {
+            observer.observe(imgRef.current);
+        }
+
+        return () => {
+            if (imgRef.current) {
+                observer.unobserve(imgRef.current);
+            }
+        };
+    }, [file.url]);
+
+    const handleLoad = () => {
+        setIsLoaded(true);
+        if (onLoad) onLoad();
+    };
+
+    return (
+        <div
+            onClick={() => isSelectionMode && onToggle(file.id)}
             style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transition: 'transform 0.2s',
-                opacity: isSelectionMode && isSelected ? 0.7 : 1
+                position: 'relative',
+                paddingBottom: '100%',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                background: '#eee',
+                cursor: isSelectionMode ? 'pointer' : 'default',
+                border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none'
             }}
-            loading="lazy"
-            onLoad={onLoad}
-        />
+        >
+            {/* Loading Placeholder */}
+            {!isLoaded && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 1.5s infinite'
+                }} />
+            )}
+
+            <img
+                ref={imgRef}
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" // 1px transparent placeholder
+                alt={file.name}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'opacity 0.3s ease-in-out',
+                    opacity: isLoaded ? (isSelectionMode && isSelected ? 0.7 : 1) : 0
+                }}
+                loading="lazy"
+                decoding="async"
+                fetchpriority={index < 6 ? 'high' : 'low'}
+                onLoad={handleLoad}
+                onError={(e) => {
+                    // Fallback to original URL on error
+                    if (!e.target.src.includes(file.url)) {
+                        e.target.src = file.url;
+                    }
+                }}
+            />
 
         {/* Video Indicator & Duration */}
         {file.type === 'video' && (
@@ -457,6 +520,12 @@ const Gallery = () => {
             padding: 6px 12px;
           }
         }
+
+        /* Shimmer loading animation */
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
       `}</style>
 
             {/* Header Controls */}
@@ -847,17 +916,22 @@ const Gallery = () => {
                                 {format(parseISO(date), 'yyyy년 M월 d일', { locale: ko })}
                             </h3>
                             <div className="gallery-grid">
-                                {files.map((file) => (
-                                    <GalleryItem
-                                        key={file.id}
-                                        file={file}
-                                        isSelectionMode={isSelectionMode}
-                                        isSelected={selectedFiles.includes(file.id)}
-                                        onToggle={toggleSelection}
-                                        searchTerm={searchTerm}
-                                        onLoad={handleImageLoad}
-                                    />
-                                ))}
+                                {files.map((file, idx) => {
+                                    // Calculate absolute index across all files for fetchpriority
+                                    const absoluteIndex = filteredFiles.findIndex(f => f.id === file.id);
+                                    return (
+                                        <GalleryItem
+                                            key={file.id}
+                                            file={file}
+                                            isSelectionMode={isSelectionMode}
+                                            isSelected={selectedFiles.includes(file.id)}
+                                            onToggle={toggleSelection}
+                                            searchTerm={searchTerm}
+                                            onLoad={handleImageLoad}
+                                            index={absoluteIndex}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}
