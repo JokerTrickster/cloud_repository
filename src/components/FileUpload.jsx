@@ -127,16 +127,27 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
   };
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) return;
+    console.log('Upload button clicked', {
+      filesCount: selectedFiles.length,
+      tags: fileTags
+    });
+
+    if (selectedFiles.length === 0) {
+      console.warn('No files selected');
+      return;
+    }
 
     setUploading(true);
     setErrors([]);
 
     try {
+      console.log('Starting upload...', selectedFiles.map(f => f.name));
+
       // 배치 업로드 (태그 포함)
       const results = await fileApi.uploadBatchFiles(
         selectedFiles,
         (fileIndex, progress) => {
+          console.log(`File ${fileIndex} progress: ${progress}%`);
           setUploadProgress(prev => ({
             ...prev,
             [fileIndex]: progress,
@@ -144,6 +155,8 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
         },
         fileTags // 태그 정보 전달
       );
+
+      console.log('Upload completed successfully', results);
 
       // 업로드 완료
       if (onUploadComplete) {
@@ -153,6 +166,7 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
       // 초기화
       setSelectedFiles([]);
       setUploadProgress({});
+      setFileTags({});
 
       if (onClose) {
         onClose();
@@ -171,9 +185,11 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
         errorMessage = error.message;
       }
 
+      console.error('Error details:', errorMessage);
       setErrors([errorMessage]);
     } finally {
       setUploading(false);
+      console.log('Upload process finished');
     }
   };
 
@@ -506,7 +522,10 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
             취소
           </button>
           <button
-            onClick={handleUpload}
+            onClick={(e) => {
+              console.log('Upload button clicked (event)');
+              handleUpload();
+            }}
             disabled={selectedFiles.length === 0 || uploading}
             style={{
               padding: '10px 20px',
@@ -516,11 +535,31 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
               borderRadius: 'var(--radius-sm)',
               cursor: selectedFiles.length === 0 || uploading ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              fontWeight: '500'
+              fontWeight: '500',
+              position: 'relative'
             }}
           >
-            {uploading ? '업로드 중...' : `업로드 (${selectedFiles.length})`}
+            {uploading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid white',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                업로드 중...
+              </div>
+            ) : (
+              `업로드 (${selectedFiles.length})`
+            )}
           </button>
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
       </div>
     </div>

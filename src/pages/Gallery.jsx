@@ -74,6 +74,12 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     if (window.openVideoPlayer) {
                         window.openVideoPlayer(file);
                     }
+                } else if (file.type === 'image') {
+                    e.stopPropagation();
+                    // Open image viewer
+                    if (window.openImageViewer) {
+                        window.openImageViewer(file);
+                    }
                 }
             }}
             onMouseEnter={handleMouseEnter}
@@ -84,7 +90,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 borderRadius: 'var(--radius-sm)',
                 overflow: 'hidden',
                 background: '#eee',
-                cursor: isSelectionMode ? 'pointer' : (file.type === 'video' ? 'pointer' : 'default'),
+                cursor: isSelectionMode ? 'pointer' : 'pointer',
                 border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none',
                 transform: isHovered && !isSelectionMode ? 'scale(1.05)' : 'scale(1)',
                 transition: 'transform 0.2s ease-in-out',
@@ -251,6 +257,7 @@ const Gallery = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [imageSize, setImageSize] = useState(150);
     const [playingVideo, setPlayingVideo] = useState(null);
+    const [viewingImage, setViewingImage] = useState(null);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [sortOption, setSortOption] = useState('latest'); // latest, oldest, name, size
     const [filterType, setFilterType] = useState('all'); // all, image, video
@@ -488,13 +495,17 @@ const Gallery = () => {
         }
     };
 
-    // Set up video player callback
+    // Set up video player and image viewer callbacks
     useEffect(() => {
         window.openVideoPlayer = (file) => {
             setPlayingVideo(file);
         };
+        window.openImageViewer = (file) => {
+            setViewingImage(file);
+        };
         return () => {
             window.openVideoPlayer = null;
+            window.openImageViewer = null;
         };
     }, []);
 
@@ -1154,6 +1165,63 @@ const Gallery = () => {
                             style={{
                                 maxWidth: '100%',
                                 maxHeight: '90vh',
+                                borderRadius: '8px'
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Image Viewer Modal */}
+            {viewingImage && (
+                <div
+                    onClick={() => setViewingImage(null)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.9)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            maxWidth: '95vw',
+                            maxHeight: '95vh',
+                            position: 'relative'
+                        }}
+                    >
+                        <button
+                            onClick={() => setViewingImage(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '-40px',
+                                right: '0',
+                                background: 'none',
+                                border: 'none',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '24px',
+                                padding: '8px',
+                                zIndex: 10
+                            }}
+                        >
+                            <X size={32} />
+                        </button>
+                        <img
+                            src={viewingImage.originalUrl || viewingImage.url}
+                            alt={viewingImage.name}
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '95vh',
+                                objectFit: 'contain',
                                 borderRadius: '8px'
                             }}
                         />
