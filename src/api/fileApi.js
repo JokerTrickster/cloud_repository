@@ -108,11 +108,19 @@ const fileApi = {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
-    // 1. 비디오 duration 추출 (병렬 처리)
+    // 1. 비디오 duration 추출 (병렬 처리, 타임아웃 3초)
     const durationPromises = files.map(async (file) => {
       if (file.type.startsWith('video/')) {
         try {
-          return await getVideoDuration(file);
+          // 타임아웃 적용 (3초)
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Duration extraction timeout')), 3000)
+          );
+
+          return await Promise.race([
+            getVideoDuration(file),
+            timeoutPromise
+          ]);
         } catch (error) {
           console.warn(`Failed to get duration for ${file.name}:`, error);
           return null;
@@ -120,17 +128,36 @@ const fileApi = {
       }
       return null;
     });
-    const durations = await Promise.all(durationPromises);
+
+    let durations = [];
+    try {
+      durations = await Promise.all(durationPromises);
+    } catch (error) {
+      console.warn('Duration extraction failed, continuing without durations:', error);
+      durations = files.map(() => null);
+    }
 
     // 2. 배치 업로드 URL 요청 (태그 + duration 포함)
-    const fileInfos = files.map((file, index) => ({
-      file_name: file.name,
-      content_type: file.type,
-      file_type: file.type.startsWith('image/') ? 'image' : 'video',
-      file_size: file.size,
-      tags: fileTags[index]?.tags || [], // 태그 추가
-      duration: durations[index], // 비디오 길이 추가
-    }));
+    const fileInfos = files.map((file, index) => {
+      const info = {
+        file_name: file.name,
+        content_type: file.type,
+        file_type: file.type.startsWith('image/') ? 'image' : 'video',
+        file_size: file.size,
+      };
+
+      // 태그와 duration은 서버가 지원하는 경우에만 포함
+      const tags = fileTags[index]?.tags || [];
+      if (tags.length > 0) {
+        info.tags = tags;
+      }
+
+      if (durations[index]) {
+        info.duration = durations[index];
+      }
+
+      return info;
+    });
 
     const batchResponse = await this.requestBatchUploadUrl(fileInfos);
 

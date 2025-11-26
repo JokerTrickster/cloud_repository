@@ -47,6 +47,31 @@ test.describe('Authenticated UI Tests', () => {
       localStorage.setItem('accessToken', 'mock-access-token');
       localStorage.setItem('refreshToken', 'mock-refresh-token');
     });
+
+    // Mock API endpoints to prevent 401 errors from real server
+    await page.route('**/api/v1/files*', async route => {
+      await route.fulfill({
+        json: {
+          files: [],
+          total_count: 0,
+          page: 1,
+          page_size: 20
+        }
+      });
+    });
+
+    await page.route('**/api/v1/user/stats', async route => {
+      await route.fulfill({
+        json: {
+          storage: { used: 0, total: 1000000000, percentage: 0 },
+          monthlyStats: { uploads: 0, downloads: 0, tagsCreated: 0 }
+        }
+      });
+    });
+
+    await page.route('**/api/v1/user/activity*', async route => {
+      await route.fulfill({ json: {} });
+    });
   });
 
   test('should show gallery page when authenticated', async ({ page }) => {
@@ -56,8 +81,8 @@ test.describe('Authenticated UI Tests', () => {
     await expect(page).toHaveURL(/\/gallery/);
 
     // Check for navigation (filter for visible buttons only to handle mobile/desktop differences)
-    await expect(page.locator('button:has-text("갤러리")').filter({ hasText: '갤러리' }).first()).toBeAttached();
-    await expect(page.locator('button:has-text("업로드")').filter({ hasText: '업로드' }).first()).toBeAttached();
+    await expect(page.locator('button:has-text("갤러리"):visible').first()).toBeVisible();
+    await expect(page.locator('button:has-text("업로드"):visible').first()).toBeVisible();
 
     // Check for search input
     await expect(page.locator('input[placeholder*="이름 또는 #태그로 검색"]')).toBeVisible();

@@ -65,7 +65,17 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 
     return (
         <div
-            onClick={() => isSelectionMode && onToggle(file.id)}
+            onClick={(e) => {
+                if (isSelectionMode) {
+                    onToggle(file.id);
+                } else if (file.type === 'video') {
+                    e.stopPropagation();
+                    // Open video player
+                    if (window.openVideoPlayer) {
+                        window.openVideoPlayer(file);
+                    }
+                }
+            }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             style={{
@@ -74,7 +84,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 borderRadius: 'var(--radius-sm)',
                 overflow: 'hidden',
                 background: '#eee',
-                cursor: isSelectionMode ? 'pointer' : 'default',
+                cursor: isSelectionMode ? 'pointer' : (file.type === 'video' ? 'pointer' : 'default'),
                 border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none',
                 transform: isHovered && !isSelectionMode ? 'scale(1.05)' : 'scale(1)',
                 transition: 'transform 0.2s ease-in-out',
@@ -150,8 +160,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: '40px',
-                        height: '40px',
+                        width: '28px',
+                        height: '28px',
                         borderRadius: '50%',
                         background: 'rgba(0,0,0,0.5)',
                         display: 'flex',
@@ -159,7 +169,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         justifyContent: 'center',
                         backdropFilter: 'blur(4px)'
                     }}>
-                        <Play size={20} fill="white" color="white" style={{ marginLeft: '2px' }} />
+                        <Play size={14} fill="white" color="white" style={{ marginLeft: '1px' }} />
                     </div>
                     {file.duration && (
                         <div style={{
@@ -214,20 +224,20 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
             {isSelectionMode && (
                 <div style={{
                     position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    width: '24px',
-                    height: '24px',
+                    top: '6px',
+                    right: '6px',
+                    width: '20px',
+                    height: '20px',
                     borderRadius: '50%',
                     background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.8)',
-                    border: '2px solid white',
+                    border: '1.5px solid white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     transition: 'all 0.2s',
                     zIndex: 20
                 }}>
-                    {isSelected && <Check size={14} color="white" />}
+                    {isSelected && <Check size={12} color="white" />}
                 </div>
             )}
         </div>
@@ -240,6 +250,7 @@ const Gallery = () => {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [imageSize, setImageSize] = useState(150);
+    const [playingVideo, setPlayingVideo] = useState(null);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [sortOption, setSortOption] = useState('latest'); // latest, oldest, name, size
     const [filterType, setFilterType] = useState('all'); // all, image, video
@@ -476,6 +487,16 @@ const Gallery = () => {
             alert('다운로드에 실패했습니다.');
         }
     };
+
+    // Set up video player callback
+    useEffect(() => {
+        window.openVideoPlayer = (file) => {
+            setPlayingVideo(file);
+        };
+        return () => {
+            window.openVideoPlayer = null;
+        };
+    }, []);
 
     const handleDelete = async () => {
         if (window.confirm(`${selectedFiles.length}개의 파일을 삭제하시겠습니까?`)) {
@@ -1083,8 +1104,69 @@ const Gallery = () => {
                     </div>
                 </div>
             )}
+
+            {/* Video Player Modal */}
+            {playingVideo && (
+                <div
+                    onClick={() => setPlayingVideo(null)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.9)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            maxWidth: '90vw',
+                            maxHeight: '90vh',
+                            position: 'relative'
+                        }}
+                    >
+                        <button
+                            onClick={() => setPlayingVideo(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '-40px',
+                                right: '0',
+                                background: 'none',
+                                border: 'none',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '24px',
+                                padding: '8px'
+                            }}
+                        >
+                            <X size={32} />
+                        </button>
+                        <video
+                            src={playingVideo.originalUrl || playingVideo.url}
+                            controls
+                            autoPlay
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '90vh',
+                                borderRadius: '8px'
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
+// Set up video player callback
+if (typeof window !== 'undefined') {
+    window.openVideoPlayer = null;
+}
 
 export default Gallery;
