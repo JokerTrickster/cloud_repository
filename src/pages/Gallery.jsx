@@ -90,7 +90,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 }}
                 loading="lazy"
                 decoding="async"
-                fetchpriority={index < 6 ? 'high' : 'low'}
+                fetchPriority={index < 6 ? 'high' : 'low'}
                 onLoad={handleLoad}
                 onError={(e) => {
                     // Fallback to original URL on error
@@ -100,93 +100,94 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 }}
             />
 
-        {/* Video Indicator & Duration */}
-        {file.type === 'video' && (
-            <>
+            {/* Video Indicator & Duration */}
+            {file.type === 'video' && (
+                <>
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(4px)'
+                    }}>
+                        <Play size={20} fill="white" color="white" style={{ marginLeft: '2px' }} />
+                    </div>
+                    {file.duration && (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            background: 'rgba(0,0,0,0.7)',
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '500'
+                        }}>
+                            {file.duration}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Tag Overlay */}
+            <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '4px',
+                background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                display: 'flex',
+                gap: '3px',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end'
+            }}>
+                {file.tags.map(tag => (
+                    <span key={tag} style={{
+                        fontSize: '9px',
+                        color: 'white',
+                        background: searchTerm === `#${tag}` ? 'var(--primary)' : 'rgba(0,0,0,0.6)',
+                        padding: '2px 5px',
+                        borderRadius: '3px',
+                        backdropFilter: 'blur(2px)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        fontWeight: '500'
+                    }}>
+                        #{tag}
+                    </span>
+                ))}
+            </div>
+
+            {/* Selection Indicator */}
+            {isSelectionMode && (
                 <div style={{
                     position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '40px',
-                    height: '40px',
+                    top: '8px',
+                    right: '8px',
+                    width: '24px',
+                    height: '24px',
                     borderRadius: '50%',
-                    background: 'rgba(0,0,0,0.5)',
+                    background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.8)',
+                    border: '2px solid white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backdropFilter: 'blur(4px)'
+                    transition: 'all 0.2s'
                 }}>
-                    <Play size={20} fill="white" color="white" style={{ marginLeft: '2px' }} />
+                    {isSelected && <Check size={14} color="white" />}
                 </div>
-                {file.duration && (
-                    <div style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        right: '8px',
-                        background: 'rgba(0,0,0,0.7)',
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        fontWeight: '500'
-                    }}>
-                        {file.duration}
-                    </div>
-                )}
-            </>
-        )}
-
-        {/* Tag Overlay */}
-        <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '4px',
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-            display: 'flex',
-            gap: '3px',
-            flexWrap: 'wrap',
-            justifyContent: 'flex-end'
-        }}>
-            {file.tags.map(tag => (
-                <span key={tag} style={{
-                    fontSize: '9px',
-                    color: 'white',
-                    background: searchTerm === `#${tag}` ? 'var(--primary)' : 'rgba(0,0,0,0.6)',
-                    padding: '2px 5px',
-                    borderRadius: '3px',
-                    backdropFilter: 'blur(2px)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    fontWeight: '500'
-                }}>
-                    #{tag}
-                </span>
-            ))}
+            )}
         </div>
-
-        {/* Selection Indicator */}
-        {isSelectionMode && (
-            <div style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.8)',
-                border: '2px solid white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s'
-            }}>
-                {isSelected && <Check size={14} color="white" />}
-            </div>
-        )}
-    </div>
-));
+    );
+});
 
 const Gallery = () => {
     const location = useLocation();
