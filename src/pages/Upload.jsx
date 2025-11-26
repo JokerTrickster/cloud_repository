@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload as UploadIcon, X, Plus } from 'lucide-react';
+import fileApi from '../api/fileApi';
 
 const Upload = () => {
     const [files, setFiles] = useState([]);
@@ -26,6 +27,33 @@ const Upload = () => {
 
     const removeTag = (tagToRemove) => {
         setTags(tags.filter(tag => tag !== tagToRemove));
+    };
+
+    const handleUpload = async () => {
+        if (files.length === 0) {
+            alert('업로드할 파일을 선택해주세요.');
+            return;
+        }
+
+        try {
+            // Prepare file tags map
+            const fileTags = {};
+            files.forEach((_, index) => {
+                fileTags[index] = { tags };
+            });
+
+            await fileApi.uploadBatchFiles(files, (index, percent) => {
+                console.log(`File ${index} progress: ${percent}%`);
+            }, fileTags);
+
+            alert('업로드가 완료되었습니다.');
+            setFiles([]);
+            setTags([]);
+            setCurrentTag('');
+        } catch (error) {
+            console.error('Upload failed:', error);
+            alert('업로드에 실패했습니다.');
+        }
     };
 
     return (
@@ -153,16 +181,19 @@ const Upload = () => {
             </div>
 
             {/* Submit Button */}
-            <button style={{
-                width: '100%',
-                padding: '16px',
-                background: 'var(--primary)',
-                color: 'white',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '16px',
-                fontWeight: '500',
-                boxShadow: 'var(--shadow-md)'
-            }}>
+            <button
+                onClick={handleUpload}
+                style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    boxShadow: 'var(--shadow-md)'
+                }}
+            >
                 업로드 시작
             </button>
         </div>
