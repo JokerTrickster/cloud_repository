@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, memo } from 'react';
+import React, { useState, useMemo, useEffect, memo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
@@ -7,7 +7,7 @@ import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
 
 // Memoized Gallery Item Component
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm }) => (
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad }) => (
     <div
         onClick={() => isSelectionMode && onToggle(file.id)}
         style={{
@@ -34,6 +34,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 opacity: isSelectionMode && isSelected ? 0.7 : 1
             }}
             loading="lazy"
+            onLoad={onLoad}
         />
 
         {/* Video Indicator & Duration */}
@@ -144,6 +145,12 @@ const Gallery = () => {
     const [showUpload, setShowUpload] = useState(false);
     const [error, setError] = useState('');
 
+    // Performance Measurement Refs
+    const loadStartTime = useRef(0);
+    const loadedImagesCount = useRef(0);
+    const totalImagesToLoad = useRef(0);
+    const apiEndTime = useRef(0);
+
     // Load files from API
     useEffect(() => {
         loadFiles();
@@ -168,6 +175,15 @@ const Gallery = () => {
     const loadFiles = async () => {
         setLoading(true);
         setError('');
+
+        // Reset performance metrics
+        loadStartTime.current = performance.now();
+        loadedImagesCount.current = 0;
+        totalImagesToLoad.current = 0;
+        apiEndTime.current = 0;
+
+        console.time('Gallery Load');
+
         try {
             const params = {
                 file_type: filterType === 'all' ? undefined : filterType,
@@ -196,6 +212,16 @@ const Gallery = () => {
             }));
 
             setFiles(transformedFiles);
+
+            apiEndTime.current = performance.now();
+            totalImagesToLoad.current = transformedFiles.length;
+
+            if (transformedFiles.length === 0) {
+                console.timeEnd('Gallery Load');
+                const totalTime = apiEndTime.current - loadStartTime.current;
+                console.log(`[Performance] No files to load. Total time: ${totalTime.toFixed(2)}ms`);
+            }
+
 
             // Extract unique tags
             const allTags = new Set();
@@ -363,6 +389,27 @@ const Gallery = () => {
         loadFiles();
         setShowUpload(false);
     };
+
+    const handleImageLoad = () => {
+        loadedImagesCount.current += 1;
+
+        if (loadedImagesCount.current === totalImagesToLoad.current && totalImagesToLoad.current > 0) {
+            const endTime = performance.now();
+            const totalTime = endTime - loadStartTime.current;
+            const apiTime = apiEndTime.current - loadStartTime.current;
+            const renderTime = endTime - apiEndTime.current;
+
+            console.timeEnd('Gallery Load');
+            console.log(`[Performance] All ${totalImagesToLoad.current} images loaded.`);
+            console.log(`[Performance] Total Time: ${totalTime.toFixed(2)}ms`);
+            console.log(`[Performance] API Latency: ${apiTime.toFixed(2)}ms`);
+            console.log(`[Performance] Image Rendering Time: ${renderTime.toFixed(2)}ms`);
+
+            // Optional: Show a toast or alert if needed, but console is cleaner for now.
+            // alert(`Performance: Total ${totalTime.toFixed(0)}ms (API: ${apiTime.toFixed(0)}ms, Render: ${renderTime.toFixed(0)}ms)`);
+        }
+    };
+
 
     return (
         <div style={{ padding: '16px', height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: '80px' }}>
@@ -786,33 +833,34 @@ const Gallery = () => {
             {!loading && files.length > 0 && (
                 <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
                     {Object.entries(groupedFiles).map(([date, files]) => (
-                    <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
-                        <h3 style={{
-                            fontSize: '14px',
-                            marginBottom: '8px',
-                            color: 'var(--text-secondary)',
-                            position: 'sticky',
-                            top: 0,
-                            background: 'var(--background)',
-                            padding: '8px 0',
-                            zIndex: 10
-                        }}>
-                            {format(parseISO(date), 'yyyy년 M월 d일', { locale: ko })}
-                        </h3>
-                        <div className="gallery-grid">
-                            {files.map((file) => (
-                                <GalleryItem
-                                    key={file.id}
-                                    file={file}
-                                    isSelectionMode={isSelectionMode}
-                                    isSelected={selectedFiles.includes(file.id)}
-                                    onToggle={toggleSelection}
-                                    searchTerm={searchTerm}
-                                />
-                            ))}
+                        <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
+                            <h3 style={{
+                                fontSize: '14px',
+                                marginBottom: '8px',
+                                color: 'var(--text-secondary)',
+                                position: 'sticky',
+                                top: 0,
+                                background: 'var(--background)',
+                                padding: '8px 0',
+                                zIndex: 10
+                            }}>
+                                {format(parseISO(date), 'yyyy년 M월 d일', { locale: ko })}
+                            </h3>
+                            <div className="gallery-grid">
+                                {files.map((file) => (
+                                    <GalleryItem
+                                        key={file.id}
+                                        file={file}
+                                        isSelectionMode={isSelectionMode}
+                                        isSelected={selectedFiles.includes(file.id)}
+                                        onToggle={toggleSelection}
+                                        searchTerm={searchTerm}
+                                        onLoad={handleImageLoad}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
                 </div>
             )}
 
