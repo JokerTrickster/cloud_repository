@@ -58,38 +58,7 @@ const DayCell = memo(({ date, activity, isToday, onClick }) => (
             )}
         </div>
 
-        {/* Tags Area - Compact List */}
-        {activity && activity.tags && activity.tags.length > 0 && (
-            <div style={{
-                marginTop: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                overflow: 'hidden'
-            }}>
-                {activity.tags.slice(0, 3).map((tag, idx) => (
-                    <span key={idx} style={{
-                        fontSize: '11px',
-                        padding: '4px 8px',
-                        background: 'rgba(66, 133, 244, 0.1)',
-                        color: 'var(--primary)',
-                        borderRadius: '4px',
-                        fontWeight: '500',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: '1.2'
-                    }}>
-                        #{tag}
-                    </span>
-                ))}
-                {activity.tags.length > 3 && (
-                    <span style={{ fontSize: '8px', color: 'var(--text-secondary)', paddingLeft: '2px' }}>
-                        +{activity.tags.length - 3}
-                    </span>
-                )}
-            </div>
-        )}
+        {/* Tags Area Removed */}
     </div>
 ));
 
