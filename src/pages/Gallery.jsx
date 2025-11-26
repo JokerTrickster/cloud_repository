@@ -186,7 +186,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
             </div>
         )}
     </div>
-));
+  );
+});
 
 const Gallery = () => {
     const location = useLocation();
