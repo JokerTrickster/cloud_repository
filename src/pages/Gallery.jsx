@@ -50,10 +50,14 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
         if (onLoad) onLoad();
     };
 
-    // Handle hover for video preview
+    // Handle hover for video preview and image preload
     const handleMouseEnter = () => {
         if (file.type === 'video' && !isSelectionMode) {
             setIsHovered(true);
+        } else if (file.type === 'image' && file.originalUrl && !isSelectionMode) {
+            // Preload original image on hover
+            const img = new Image();
+            img.src = file.originalUrl;
         }
     };
 
@@ -258,6 +262,8 @@ const Gallery = () => {
     const [imageSize, setImageSize] = useState(150);
     const [playingVideo, setPlayingVideo] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
+    const [imageLoading, setImageLoading] = useState(true);
+    const [preloadedImages, setPreloadedImages] = useState(new Set());
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [sortOption, setSortOption] = useState('latest'); // latest, oldest, name, size
     const [filterType, setFilterType] = useState('all'); // all, image, video
@@ -501,6 +507,7 @@ const Gallery = () => {
             setPlayingVideo(file);
         };
         window.openImageViewer = (file) => {
+            setImageLoading(true);
             setViewingImage(file);
         };
         return () => {
@@ -1172,10 +1179,13 @@ const Gallery = () => {
                 </div>
             )}
 
-            {/* Image Viewer Modal */}
+            {/* Image Viewer Modal with Progressive Loading */}
             {viewingImage && (
                 <div
-                    onClick={() => setViewingImage(null)}
+                    onClick={() => {
+                        setViewingImage(null);
+                        setImageLoading(true);
+                    }}
                     style={{
                         position: 'fixed',
                         top: 0,
@@ -1199,7 +1209,10 @@ const Gallery = () => {
                         }}
                     >
                         <button
-                            onClick={() => setViewingImage(null)}
+                            onClick={() => {
+                                setViewingImage(null);
+                                setImageLoading(true);
+                            }}
                             style={{
                                 position: 'absolute',
                                 top: '-40px',
@@ -1215,14 +1228,58 @@ const Gallery = () => {
                         >
                             <X size={32} />
                         </button>
+
+                        {/* Thumbnail placeholder (shows immediately) */}
+                        {imageLoading && (
+                            <img
+                                src={viewingImage.url}
+                                alt={viewingImage.name}
+                                style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '95vh',
+                                    objectFit: 'contain',
+                                    borderRadius: '8px',
+                                    filter: 'blur(10px)',
+                                    opacity: 0.7
+                                }}
+                            />
+                        )}
+
+                        {/* Loading spinner */}
+                        {imageLoading && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                zIndex: 10
+                            }}>
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    border: '4px solid rgba(255,255,255,0.3)',
+                                    borderTopColor: 'white',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                }} />
+                            </div>
+                        )}
+
+                        {/* Original image (loads in background) */}
                         <img
                             src={viewingImage.originalUrl || viewingImage.url}
                             alt={viewingImage.name}
+                            onLoad={() => setImageLoading(false)}
                             style={{
                                 maxWidth: '100%',
                                 maxHeight: '95vh',
                                 objectFit: 'contain',
-                                borderRadius: '8px'
+                                borderRadius: '8px',
+                                opacity: imageLoading ? 0 : 1,
+                                transition: 'opacity 0.3s ease-in-out',
+                                position: imageLoading ? 'absolute' : 'relative',
+                                top: 0,
+                                left: 0
                             }}
                         />
                     </div>
