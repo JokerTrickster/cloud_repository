@@ -246,15 +246,63 @@ const fileApi = {
    * @param {string} fileName - 저장할 파일명 (optional)
    */
   async downloadFile(fileId, fileName) {
-    const { download_url, file_name } = await this.getDownloadUrl(fileId);
+    try {
+      const { download_url, file_name } = await this.getDownloadUrl(fileId);
+      const finalFileName = fileName || file_name;
 
-    // Create temporary link and trigger download
-    const link = document.createElement('a');
-    link.href = download_url;
-    link.download = fileName || file_name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      try {
+        // Method 1: Fetch as blob (best for CORS-enabled URLs)
+        const response = await fetch(download_url, {
+          mode: 'cors',
+          credentials: 'omit'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Trigger download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = finalFileName;
+        link.style.display = 'none';
+
+        document.body.appendChild(link);
+        link.click();
+
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 100);
+
+      } catch (fetchError) {
+        console.warn('Blob download failed, trying direct download:', fetchError);
+
+        // Method 2: Fallback to direct link (for CORS issues)
+        // This may open in browser instead of downloading on some browsers
+        const link = document.createElement('a');
+        link.href = download_url;
+        link.download = finalFileName;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+
+        document.body.appendChild(link);
+        link.click();
+
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+      }
+
+    } catch (error) {
+      console.error('Download failed:', error);
+      throw new Error(`파일 다운로드에 실패했습니다: ${error.message}`);
+    }
   },
 
   /**
