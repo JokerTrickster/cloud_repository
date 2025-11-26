@@ -90,7 +90,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 }}
                 loading="lazy"
                 decoding="async"
-                fetchpriority={index < 6 ? 'high' : 'low'}
+                fetchPriority={index < 6 ? 'high' : 'low'}
                 onLoad={handleLoad}
                 onError={(e) => {
                     // Fallback to original URL on error
