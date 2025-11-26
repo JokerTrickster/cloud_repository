@@ -1,6 +1,6 @@
 import axios from 'axios';
 import client from './client';
-import { generateThumbnail } from '../utils/thumbnail';
+import { generateThumbnail, generateVideoThumbnail, getVideoDuration } from '../utils/thumbnail';
 
 /**
  * CloudRepository File API Client
@@ -108,13 +108,28 @@ const fileApi = {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
-    // 1. 배치 업로드 URL 요청 (태그 포함)
+    // 1. 비디오 duration 추출 (병렬 처리)
+    const durationPromises = files.map(async (file) => {
+      if (file.type.startsWith('video/')) {
+        try {
+          return await getVideoDuration(file);
+        } catch (error) {
+          console.warn(`Failed to get duration for ${file.name}:`, error);
+          return null;
+        }
+      }
+      return null;
+    });
+    const durations = await Promise.all(durationPromises);
+
+    // 2. 배치 업로드 URL 요청 (태그 + duration 포함)
     const fileInfos = files.map((file, index) => ({
       file_name: file.name,
       content_type: file.type,
       file_type: file.type.startsWith('image/') ? 'image' : 'video',
       file_size: file.size,
       tags: fileTags[index]?.tags || [], // 태그 추가
+      duration: durations[index], // 비디오 길이 추가
     }));
 
     const batchResponse = await this.requestBatchUploadUrl(fileInfos);
@@ -135,15 +150,28 @@ const fileApi = {
         }
       );
 
-      // 이미지인 경우 썸네일 생성 및 업로드 (진행률 80-100%)
-      if (file.type.startsWith('image/') && result.thumbnail_upload_url) {
+      // 썸네일 생성 및 업로드 (진행률 80-100%)
+      if (result.thumbnail_upload_url) {
         try {
-          // 썸네일 생성
-          const thumbnail = await generateThumbnail(file, {
-            maxWidth: 200,
-            maxHeight: 200,
-            quality: 0.8
-          });
+          let thumbnail = null;
+
+          // 이미지 썸네일 생성
+          if (file.type.startsWith('image/')) {
+            thumbnail = await generateThumbnail(file, {
+              maxWidth: 200,
+              maxHeight: 200,
+              quality: 0.8
+            });
+          }
+          // 비디오 썸네일 생성 (첫 프레임 캡처)
+          else if (file.type.startsWith('video/')) {
+            thumbnail = await generateVideoThumbnail(file, {
+              maxWidth: 200,
+              maxHeight: 200,
+              quality: 0.8,
+              seekTime: 1 // 1초 시점 캡처
+            });
+          }
 
           if (thumbnail) {
             // 썸네일 업로드

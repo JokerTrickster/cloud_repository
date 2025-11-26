@@ -5,6 +5,7 @@ import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, su
 import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
+import { formatDuration } from '../utils/thumbnail';
 
 // Memoized Gallery Item Component with Lazy Loading
 const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index }) => {
@@ -131,7 +132,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         fontSize: '10px',
                         fontWeight: '500'
                     }}>
-                        {file.duration}
+                        {formatDuration(file.duration)}
                     </div>
                 )}
             </>
