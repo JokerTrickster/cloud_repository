@@ -184,7 +184,10 @@ const Gallery = () => {
             const transformedFiles = result.files.map(file => ({
                 id: file.id,
                 name: file.file_name,
-                url: file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
+                // 목록에서는 썸네일 우선 사용 (빠른 로딩)
+                url: file.thumbnail_url || file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
+                // 원본 URL은 별도로 저장 (상세보기용)
+                originalUrl: file.download_url || file.url,
                 type: file.file_type,
                 date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
                 tags: file.tags ? file.tags.map(t => t.name) : [],

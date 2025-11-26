@@ -117,7 +117,7 @@ const MyPage = () => {
                     display: grid;
                     grid-template-columns: repeat(7, 1fr);
                     gap: 12px;
-                    grid-auto-rows: 0;
+                    grid-auto-rows: auto;
                 }
                 .day-cell {
                     aspect-ratio: 1;

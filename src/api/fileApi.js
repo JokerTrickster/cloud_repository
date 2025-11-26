@@ -1,5 +1,6 @@
 import axios from 'axios';
 import client from './client';
+import { generateThumbnail } from '../utils/thumbnail';
 
 /**
  * CloudRepository File API Client
@@ -95,7 +96,7 @@ const fileApi = {
   },
 
   /**
-   * 배치 업로드 플로우
+   * 배치 업로드 플로우 (썸네일 포함)
    *
    * @param {Array<File>} files - 업로드할 파일 배열 (최대 30개)
    * @param {Function} onProgress - 진행률 콜백 (fileIndex, progress)
@@ -116,21 +117,56 @@ const fileApi = {
 
     const batchResponse = await this.requestBatchUploadUrl(fileInfos);
 
-    // 2. 각 파일을 S3에 업로드
-    const uploadPromises = batchResponse.results.map((result, index) => {
-      return this.uploadToS3(
+    // 2. 각 파일을 S3에 업로드 (원본 + 썸네일)
+    const uploadPromises = batchResponse.results.map(async (result, index) => {
+      const file = files[index];
+
+      // 원본 파일 업로드 (진행률 0-80%)
+      await this.uploadToS3(
         result.upload_url,
-        files[index],
+        file,
         (progress) => {
           if (onProgress) {
-            onProgress(index, progress);
+            // 원본 업로드는 전체의 80%
+            onProgress(index, Math.round(progress * 0.8));
           }
         }
-      ).then(() => ({
+      );
+
+      // 이미지인 경우 썸네일 생성 및 업로드 (진행률 80-100%)
+      if (file.type.startsWith('image/') && result.thumbnail_upload_url) {
+        try {
+          // 썸네일 생성
+          const thumbnail = await generateThumbnail(file, {
+            maxWidth: 200,
+            maxHeight: 200,
+            quality: 0.8
+          });
+
+          if (thumbnail) {
+            // 썸네일 업로드
+            await axios.put(result.thumbnail_upload_url, thumbnail, {
+              headers: {
+                'Content-Type': 'image/jpeg',
+              }
+            });
+          }
+        } catch (err) {
+          console.warn(`Failed to upload thumbnail for ${file.name}:`, err);
+          // 썸네일 업로드 실패는 무시하고 계속 진행
+        }
+      }
+
+      // 최종 진행률 100%
+      if (onProgress) {
+        onProgress(index, 100);
+      }
+
+      return {
         file_id: result.file_id,
         s3_key: result.s3_key,
-        file_name: files[index].name,
-      }));
+        file_name: file.name,
+      };
     });
 
     return Promise.all(uploadPromises);
