@@ -401,20 +401,26 @@ const Gallery = () => {
                     order: sortOption === 'latest' || sortOption === 'oldest' ? (sortOption === 'latest' ? 'desc' : 'asc') : 'desc',
                 };
 
+                console.log('[Favorites] Fetching favorites with params:', params);
                 const result = await fileApi.getFavorites(params);
+                console.log('[Favorites] API response:', result);
 
                 // Transform favorites API response
-                transformedFiles = result.data.map(file => ({
+                // Check if result.data exists, otherwise use result directly
+                const favoritesData = result.data || result;
+                console.log('[Favorites] Favorites data:', favoritesData);
+
+                transformedFiles = favoritesData.map(file => ({
                     id: file.id,
-                    name: file.fileName,
-                    url: file.thumbnailUrl || file.downloadUrl || `https://via.placeholder.com/300?text=${file.fileName}`,
-                    originalUrl: file.downloadUrl,
-                    type: file.contentType.startsWith('image/') ? 'image' : 'video',
-                    date: format(parseISO(file.uploadedAt), 'yyyy-MM-dd'),
-                    tags: file.tags ? file.tags.map(t => t.name) : [],
-                    duration: null,
-                    size: file.fileSize,
-                    created_at: file.uploadedAt,
+                    name: file.fileName || file.file_name,
+                    url: file.thumbnailUrl || file.thumbnail_url || file.downloadUrl || file.download_url || `https://via.placeholder.com/300?text=${file.fileName || file.file_name}`,
+                    originalUrl: file.downloadUrl || file.download_url,
+                    type: (file.contentType || file.content_type || '').startsWith('image/') ? 'image' : 'video',
+                    date: format(parseISO(file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd'),
+                    tags: file.tags ? file.tags.map(t => t.name || t) : [],
+                    duration: file.duration || null,
+                    size: file.fileSize || file.file_size,
+                    created_at: file.uploadedAt || file.uploaded_at,
                     isFavorite: true, // 즐겨찾기 목록이므로 모두 true
                 }));
             } else {
@@ -467,7 +473,18 @@ const Gallery = () => {
 
         } catch (err) {
             console.error('Failed to load files:', err);
-            setError(err.response?.data?.error || '파일을 불러오는데 실패했습니다.');
+            console.error('Error details:', {
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status
+            });
+
+            const errorMessage = err.response?.data?.error
+                || err.response?.data?.message
+                || err.message
+                || '파일을 불러오는데 실패했습니다.';
+
+            setError(`${errorMessage}\n\n콘솔(F12)에서 자세한 에러를 확인하세요.`);
         } finally {
             setLoading(false);
         }
