@@ -386,7 +386,7 @@ const Gallery = () => {
 
             // 즐겨찾기 목록 가져오기 (백엔드가 is_favorite 필드를 제공하지 않을 경우)
             try {
-                const favoritesResult = await fileApi.getFavorites({ page: 1, size: 1000 });
+                const favoritesResult = await fileApi.getFavorites({ page: 1, size: 100 });
                 favoriteFileIds = new Set(favoritesResult.data.map(f => f.id));
             } catch (error) {
                 console.warn('Failed to load favorites list:', error);
