@@ -257,12 +257,12 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     aria-label={file.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                     style={{
                         position: 'absolute',
-                        top: '6px',
-                        right: '6px',
-                        width: '28px',
-                        height: '28px',
+                        top: '4px',
+                        right: '4px',
+                        width: '24px',
+                        height: '24px',
                         borderRadius: '50%',
-                        background: 'rgba(0,0,0,0.6)',
+                        background: 'rgba(0,0,0,0.5)',
                         backdropFilter: 'blur(4px)',
                         border: 'none',
                         display: 'flex',
@@ -275,7 +275,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     }}
                     onMouseEnter={(e) => {
                         if (!isTogglingFavorite) {
-                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.transform = 'scale(1.15)';
                         }
                     }}
                     onMouseLeave={(e) => {
@@ -283,10 +283,10 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     }}
                 >
                     <Star
-                        size={16}
+                        size={12}
                         fill={file.isFavorite ? '#FBBC04' : 'none'}
                         color={file.isFavorite ? '#FBBC04' : 'white'}
-                        strokeWidth={2}
+                        strokeWidth={2.5}
                     />
                 </button>
             )}
@@ -381,6 +381,15 @@ const Gallery = () => {
 
         try {
             let transformedFiles = [];
+            let favoriteFileIds = new Set();
+
+            // 즐겨찾기 목록 가져오기 (백엔드가 is_favorite 필드를 제공하지 않을 경우)
+            try {
+                const favoritesResult = await fileApi.getFavorites({ page: 1, size: 1000 });
+                favoriteFileIds = new Set(favoritesResult.data.map(f => f.id));
+            } catch (error) {
+                console.warn('Failed to load favorites list:', error);
+            }
 
             if (favoriteOnly) {
                 // 즐겨찾기 목록 조회 (별도 API)
@@ -432,7 +441,7 @@ const Gallery = () => {
                     duration: file.duration || null,
                     size: file.file_size,
                     created_at: file.created_at,
-                    isFavorite: file.is_favorite || false,
+                    isFavorite: favoriteFileIds.has(file.id) || file.is_favorite || false,
                 }));
             }
 
