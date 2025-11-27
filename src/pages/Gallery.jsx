@@ -757,9 +757,17 @@ const Gallery = () => {
 
         try {
             // API call
+            console.log('[Favorite] Toggling favorite:', { fileId, currentFavorite, action: currentFavorite ? 'remove' : 'add' });
             await fileApi.toggleFavorite(fileId, currentFavorite);
+            console.log('[Favorite] Success');
         } catch (error) {
-            console.error('Toggle favorite failed:', error);
+            console.error('[Favorite] Toggle failed:', error);
+            console.error('[Favorite] Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                statusText: error.response?.statusText
+            });
 
             // Rollback on failure
             setFiles(prevFiles =>
@@ -768,8 +776,9 @@ const Gallery = () => {
                 )
             );
 
-            // Show error message
-            alert('즐겨찾기 변경에 실패했습니다. 다시 시도해주세요.');
+            // Show error message with details
+            const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+            alert(`즐겨찾기 변경에 실패했습니다.\n에러: ${errorMsg}\n\n백엔드 서버 로그를 확인해주세요.`);
         }
     };
 

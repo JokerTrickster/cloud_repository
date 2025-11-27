@@ -418,10 +418,12 @@ const fileApi = {
    * @returns {Promise<Object>} { success, favoritedAt }
    */
   async addFavorite(fileId) {
+    console.log('[API] Adding favorite:', { fileId, type: typeof fileId });
     const { data } = await client.post('/api/v1/favorites',
       { fileId },
       { baseURL: import.meta.env.VITE_FILE_API_URL }
     );
+    console.log('[API] Add favorite response:', data);
     return data;
   },
 
@@ -433,9 +435,11 @@ const fileApi = {
    * @returns {Promise<void>} 204 No Content
    */
   async removeFavorite(fileId) {
+    console.log('[API] Removing favorite:', { fileId, type: typeof fileId });
     await client.delete(`/api/v1/favorites/${fileId}`, {
       baseURL: import.meta.env.VITE_FILE_API_URL
     });
+    console.log('[API] Remove favorite success');
   },
 
   /**
