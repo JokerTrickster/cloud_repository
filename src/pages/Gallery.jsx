@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, memo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download } from 'lucide-react';
+import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download, Star } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
@@ -8,11 +8,19 @@ import FileUpload from '../components/FileUpload';
 import { formatDuration } from '../utils/thumbnail';
 
 // Memoized Gallery Item Component with Lazy Loading
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index }) => {
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onToggleFavorite }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
     const imgRef = useRef(null);
     const videoRef = useRef(null);
+
+    // Reset toggling state when favorite status changes
+    useEffect(() => {
+        if (isTogglingFavorite) {
+            setIsTogglingFavorite(false);
+        }
+    }, [file.isFavorite]);
 
     useEffect(() => {
         // Intersection Observer for lazy loading with preload margin
@@ -234,6 +242,55 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 </div>
             )}
 
+            {/* Favorite Button */}
+            {!isSelectionMode && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isTogglingFavorite && onToggleFavorite) {
+                            setIsTogglingFavorite(true);
+                            onToggleFavorite(file.id, file.isFavorite);
+                        }
+                    }}
+                    disabled={isTogglingFavorite}
+                    aria-pressed={file.isFavorite}
+                    aria-label={file.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                    style={{
+                        position: 'absolute',
+                        top: '6px',
+                        right: '6px',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.6)',
+                        backdropFilter: 'blur(4px)',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: isTogglingFavorite ? 'wait' : 'pointer',
+                        transition: 'all 0.2s',
+                        zIndex: 20,
+                        opacity: isTogglingFavorite ? 0.5 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!isTogglingFavorite) {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                >
+                    <Star
+                        size={16}
+                        fill={file.isFavorite ? '#FBBC04' : 'none'}
+                        color={file.isFavorite ? '#FBBC04' : 'white'}
+                        strokeWidth={2}
+                    />
+                </button>
+            )}
+
             {/* Selection Indicator */}
             {isSelectionMode && (
                 <div style={{
@@ -271,6 +328,7 @@ const Gallery = () => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [sortOption, setSortOption] = useState('latest'); // latest, oldest, name, size
     const [filterType, setFilterType] = useState('all'); // all, image, video
+    const [favoriteOnly, setFavoriteOnly] = useState(false); // Show only favorites
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [targetDate, setTargetDate] = useState('');
     const [dateRange, setDateRange] = useState({ start: null, end: null });
@@ -291,7 +349,7 @@ const Gallery = () => {
     // Load files from API
     useEffect(() => {
         loadFiles();
-    }, [dateRange, filterType, sortOption]);
+    }, [dateRange, filterType, sortOption, favoriteOnly]);
 
     // Handle URL query param for date navigation
     useEffect(() => {
@@ -322,32 +380,61 @@ const Gallery = () => {
         console.time('Gallery Load');
 
         try {
-            const params = {
-                file_type: filterType === 'all' ? undefined : filterType,
-                sort: sortOption,
-                start_date: dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
-                end_date: dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
-                page: 1,
-                page_size: 100,
-            };
+            let transformedFiles = [];
 
-            const result = await fileApi.getFiles(params);
+            if (favoriteOnly) {
+                // 즐겨찾기 목록 조회 (별도 API)
+                const params = {
+                    page: 1,
+                    size: 100,
+                    sort: sortOption === 'latest' ? 'uploadDate' : sortOption,
+                    order: sortOption === 'latest' || sortOption === 'oldest' ? (sortOption === 'latest' ? 'desc' : 'asc') : 'desc',
+                };
 
-            // Transform API response to match frontend structure
-            const transformedFiles = result.files.map(file => ({
-                id: file.id,
-                name: file.file_name,
-                // 목록에서는 썸네일 우선 사용 (빠른 로딩)
-                url: file.thumbnail_url || file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
-                // 원본 URL은 별도로 저장 (상세보기용)
-                originalUrl: file.download_url || file.url,
-                type: file.file_type,
-                date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
-                tags: file.tags ? file.tags.map(t => t.name) : [],
-                duration: file.duration || null, // 비디오 길이 (초)
-                size: file.file_size,
-                created_at: file.created_at,
-            }));
+                const result = await fileApi.getFavorites(params);
+
+                // Transform favorites API response
+                transformedFiles = result.data.map(file => ({
+                    id: file.id,
+                    name: file.fileName,
+                    url: file.thumbnailUrl || file.downloadUrl || `https://via.placeholder.com/300?text=${file.fileName}`,
+                    originalUrl: file.downloadUrl,
+                    type: file.contentType.startsWith('image/') ? 'image' : 'video',
+                    date: format(parseISO(file.uploadedAt), 'yyyy-MM-dd'),
+                    tags: file.tags ? file.tags.map(t => t.name) : [],
+                    duration: null,
+                    size: file.fileSize,
+                    created_at: file.uploadedAt,
+                    isFavorite: true, // 즐겨찾기 목록이므로 모두 true
+                }));
+            } else {
+                // 일반 파일 목록 조회
+                const params = {
+                    file_type: filterType === 'all' ? undefined : filterType,
+                    sort: sortOption,
+                    start_date: dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
+                    end_date: dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
+                    page: 1,
+                    page_size: 100,
+                };
+
+                const result = await fileApi.getFiles(params);
+
+                // Transform API response to match frontend structure
+                transformedFiles = result.files.map(file => ({
+                    id: file.id,
+                    name: file.file_name,
+                    url: file.thumbnail_url || file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
+                    originalUrl: file.download_url || file.url,
+                    type: file.file_type,
+                    date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
+                    tags: file.tags ? file.tags.map(t => t.name) : [],
+                    duration: file.duration || null,
+                    size: file.file_size,
+                    created_at: file.created_at,
+                    isFavorite: file.is_favorite || false,
+                }));
+            }
 
             setFiles(transformedFiles);
 
@@ -594,6 +681,33 @@ const Gallery = () => {
         }
     };
 
+    // Toggle favorite with optimistic update
+    const handleToggleFavorite = async (fileId, currentFavorite) => {
+        // Optimistic update
+        setFiles(prevFiles =>
+            prevFiles.map(f =>
+                f.id === fileId ? { ...f, isFavorite: !currentFavorite } : f
+            )
+        );
+
+        try {
+            // API call
+            await fileApi.toggleFavorite(fileId, currentFavorite);
+        } catch (error) {
+            console.error('Toggle favorite failed:', error);
+
+            // Rollback on failure
+            setFiles(prevFiles =>
+                prevFiles.map(f =>
+                    f.id === fileId ? { ...f, isFavorite: currentFavorite } : f
+                )
+            );
+
+            // Show error message
+            alert('즐겨찾기 변경에 실패했습니다. 다시 시도해주세요.');
+        }
+    };
+
     const handleImageLoad = () => {
         loadedImagesCount.current += 1;
 
@@ -704,7 +818,7 @@ const Gallery = () => {
 
                 {/* Filter Tabs & Date Picker */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {['all', 'image', 'video'].map(type => (
                             <button
                                 key={type}
@@ -723,6 +837,32 @@ const Gallery = () => {
                                 {type === 'all' ? '전체' : type === 'image' ? '이미지' : '동영상'}
                             </button>
                         ))}
+
+                        {/* Favorite Filter */}
+                        <button
+                            onClick={() => setFavoriteOnly(!favoriteOnly)}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: 'var(--radius-full)',
+                                border: favoriteOnly ? '1px solid #FBBC04' : '1px solid var(--border)',
+                                background: favoriteOnly ? '#FFF8E1' : 'var(--surface)',
+                                color: favoriteOnly ? '#FBBC04' : 'var(--text-secondary)',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: '500'
+                            }}
+                        >
+                            <Star
+                                size={14}
+                                fill={favoriteOnly ? '#FBBC04' : 'none'}
+                                color={favoriteOnly ? '#FBBC04' : 'currentColor'}
+                                strokeWidth={2}
+                            />
+                            즐겨찾기
+                        </button>
                     </div>
 
 
@@ -1070,6 +1210,7 @@ const Gallery = () => {
                                             searchTerm={searchTerm}
                                             onLoad={handleImageLoad}
                                             index={absoluteIndex}
+                                            onToggleFavorite={handleToggleFavorite}
                                         />
                                     );
                                 })}

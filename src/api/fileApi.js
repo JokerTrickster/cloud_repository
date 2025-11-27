@@ -409,6 +409,71 @@ const fileApi = {
     });
     return data;
   },
+
+  /**
+   * 8. 즐겨찾기 추가
+   * POST /api/v1/favorites
+   *
+   * @param {number} fileId - 파일 ID
+   * @returns {Promise<Object>} { success, favoritedAt }
+   */
+  async addFavorite(fileId) {
+    const { data } = await client.post('/api/v1/favorites',
+      { fileId },
+      { baseURL: import.meta.env.VITE_FILE_API_URL }
+    );
+    return data;
+  },
+
+  /**
+   * 9. 즐겨찾기 해제
+   * DELETE /api/v1/favorites/:fileId
+   *
+   * @param {number} fileId - 파일 ID
+   * @returns {Promise<void>} 204 No Content
+   */
+  async removeFavorite(fileId) {
+    await client.delete(`/api/v1/favorites/${fileId}`, {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
+  },
+
+  /**
+   * 10. 즐겨찾기 토글 (추가/해제)
+   *
+   * @param {number} fileId - 파일 ID
+   * @param {boolean} isFavorite - 현재 즐겨찾기 상태
+   * @returns {Promise<Object>}
+   */
+  async toggleFavorite(fileId, isFavorite) {
+    if (isFavorite) {
+      return this.removeFavorite(fileId);
+    } else {
+      return this.addFavorite(fileId);
+    }
+  },
+
+  /**
+   * 11. 즐겨찾기 목록 조회
+   * GET /api/v1/favorites
+   *
+   * @param {Object} params - 쿼리 파라미터
+   * @param {number} params.page - 페이지 번호 (기본: 1)
+   * @param {number} params.size - 페이지 크기 (기본: 20, 최대: 100)
+   * @param {string} params.sort - 정렬 기준 (uploadDate, fileName)
+   * @param {string} params.order - 정렬 순서 (asc, desc)
+   * @param {string} params.q - 파일명 검색
+   * @param {string} params.ext - 확장자 필터
+   * @param {string} params.tag - 태그 필터
+   * @returns {Promise<Object>} { data: [...], pagination: {...} }
+   */
+  async getFavorites(params = {}) {
+    const { data } = await client.get('/api/v1/favorites', {
+      params,
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
+    return data;
+  },
 };
 
 /**
