@@ -905,7 +905,8 @@ const Gallery = () => {
                                     color: filterType === type ? 'white' : 'var(--text-secondary)',
                                     fontSize: '13px',
                                     cursor: 'pointer',
-                                    textTransform: 'capitalize'
+                                    textTransform: 'capitalize',
+                                    letterSpacing: '0'
                                 }}
                             >
                                 {type === 'all' ? '전체' : type === 'image' ? '이미지' : '동영상'}
@@ -926,7 +927,7 @@ const Gallery = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                fontWeight: '500'
+                                letterSpacing: '0'
                             }}
                         >
                             <Star
@@ -1135,7 +1136,8 @@ const Gallery = () => {
                                 fontSize: '13px',
                                 color: 'var(--text-secondary)',
                                 cursor: 'pointer',
-                                outline: 'none'
+                                outline: 'none',
+                                letterSpacing: '0'
                             }}
                         >
                             <option value="latest">최신순</option>
@@ -1813,9 +1815,8 @@ const Gallery = () => {
                                     overflow: 'hidden'
                                 }}>
                                     <div style={{
-                                        width: `${
-                                            Object.values(uploadState.progress).reduce((sum, val) => sum + val, 0) / uploadState.total || 0
-                                        }%`,
+                                        width: `${Object.values(uploadState.progress).reduce((sum, val) => sum + val, 0) / uploadState.total || 0
+                                            }%`,
                                         height: '100%',
                                         background: 'linear-gradient(90deg, var(--primary) 0%, #4f9cf9 100%)',
                                         transition: 'width 0.3s ease'
