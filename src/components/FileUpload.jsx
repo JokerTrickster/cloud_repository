@@ -2,13 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import fileApi, { fileValidation } from '../api/fileApi';
 
-const FileUpload = ({ onUploadComplete, onClose }) => {
+const FileUpload = ({ onUploadStart, onClose }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileTags, setFileTags] = useState({}); // { fileIndex: [tags] }
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [uploadResult, setUploadResult] = useState(null);
   const [errors, setErrors] = useState([]);
   const fileInputRef = useRef(null);
 
@@ -140,82 +136,27 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const handleUpload = async () => {
-    console.log('Upload button clicked', {
-      filesCount: selectedFiles.length,
-      tags: fileTags
-    });
-
+  const handleUpload = () => {
     if (selectedFiles.length === 0) {
       console.warn('No files selected');
       return;
     }
 
-    setUploading(true);
-    setErrors([]);
-
-    try {
-      console.log('Starting upload...', selectedFiles.map(f => f.name));
-
-      // 배치 업로드 (태그 포함)
-      const results = await fileApi.uploadBatchFiles(
+    // 업로드 함수 생성 (백그라운드 실행용)
+    const uploadFn = (onProgress) => {
+      return fileApi.uploadBatchFiles(
         selectedFiles,
-        (fileIndex, progress) => {
-          console.log(`File ${fileIndex} progress: ${progress}%`);
-          setUploadProgress(prev => ({
-            ...prev,
-            [fileIndex]: progress,
-          }));
-        },
-        fileTags // 태그 정보 전달
+        onProgress,
+        fileTags
       );
+    };
 
-      console.log('Upload completed successfully', results);
-
-      // 업로드 완료 결과 저장
-      setUploadSuccess(true);
-      setUploadResult({
-        total: results.length,
-        success: results.filter(r => r.file_id).length,
-        failed: results.filter(r => !r.file_id).length
-      });
-
-      // 업로드 완료 콜백
-      if (onUploadComplete) {
-        onUploadComplete(results);
-      }
-
-      // 3초 후 자동 닫기
-      setTimeout(() => {
-        setSelectedFiles([]);
-        setUploadProgress({});
-        setFileTags({});
-        setUploadSuccess(false);
-        setUploadResult(null);
-        if (onClose) {
-          onClose();
-        }
-      }, 3000);
-    } catch (error) {
-      console.error('Upload failed:', error);
-      let errorMessage = '업로드에 실패했습니다.';
-
-      if (error.response?.data?.error) {
-        if (typeof error.response.data.error === 'string') {
-          errorMessage = error.response.data.error;
-        } else if (error.response.data.error.message) {
-          errorMessage = error.response.data.error.message;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      console.error('Error details:', errorMessage);
-      setErrors([errorMessage]);
-    } finally {
-      setUploading(false);
-      console.log('Upload process finished');
+    // Gallery로 업로드 시작 알림
+    if (onUploadStart) {
+      onUploadStart(selectedFiles, fileTags, uploadFn);
     }
+
+    // 모달은 Gallery의 handleUploadStart에서 닫음
   };
 
   return (
@@ -250,81 +191,23 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: uploading ? '16px' : 0
+            alignItems: 'center'
           }}>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
               파일 업로드
             </h2>
             <button
               onClick={onClose}
-              disabled={uploading}
               style={{
                 background: 'none',
                 border: 'none',
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                padding: '4px',
-                opacity: uploading ? 0.5 : 1
+                cursor: 'pointer',
+                padding: '4px'
               }}
             >
               <X size={20} />
             </button>
           </div>
-
-          {/* Overall Progress Bar */}
-          {uploading && selectedFiles.length > 0 && (
-            <div style={{
-              marginTop: '12px',
-              padding: '16px',
-              background: 'linear-gradient(135deg, rgba(26, 115, 232, 0.05) 0%, rgba(79, 156, 249, 0.05) 100%)',
-              borderRadius: '12px',
-              border: '1px solid rgba(26, 115, 232, 0.1)'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '12px'
-              }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                    업로드 진행 중
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    {Object.values(uploadProgress).filter(p => p === 100).length} / {selectedFiles.length} 파일 완료
-                  </div>
-                </div>
-                <div style={{
-                  fontSize: '28px',
-                  fontWeight: '800',
-                  color: 'var(--primary)',
-                  lineHeight: 1
-                }}>
-                  {Math.round(
-                    Object.values(uploadProgress).reduce((sum, val) => sum + val, 0) / selectedFiles.length || 0
-                  )}%
-                </div>
-              </div>
-              <div style={{
-                height: '12px',
-                background: 'rgba(0,0,0,0.08)',
-                borderRadius: '6px',
-                overflow: 'hidden',
-                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
-              }}>
-                <div style={{
-                  width: `${
-                    Object.values(uploadProgress).reduce((sum, val) => sum + val, 0) / selectedFiles.length || 0
-                  }%`,
-                  height: '100%',
-                  background: 'linear-gradient(90deg, var(--primary) 0%, #4f9cf9 100%)',
-                  transition: 'width 0.3s ease',
-                  borderRadius: '6px',
-                  boxShadow: '0 2px 4px rgba(26, 115, 232, 0.3)'
-                }} />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Content */}
@@ -333,80 +216,8 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
           overflowY: 'auto',
           padding: '20px'
         }}>
-          {/* Upload Success Screen */}
-          {uploadSuccess && uploadResult && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '60px 20px',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                background: uploadResult.failed === 0 ? '#E6F4EA' : '#FFF8E1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '24px',
-                animation: 'scaleIn 0.3s ease-out'
-              }}>
-                <Check size={40} color={uploadResult.failed === 0 ? '#4CAF50' : '#FBBC04'} strokeWidth={3} />
-              </div>
-
-              <h2 style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                color: 'var(--text-primary)',
-                marginBottom: '12px'
-              }}>
-                {uploadResult.failed === 0 ? '업로드 완료!' : '업로드 완료 (일부 실패)'}
-              </h2>
-
-              <p style={{
-                fontSize: '16px',
-                color: 'var(--text-secondary)',
-                marginBottom: '8px'
-              }}>
-                총 {uploadResult.total}개 파일
-              </p>
-
-              <div style={{
-                display: 'flex',
-                gap: '16px',
-                fontSize: '14px',
-                marginBottom: '24px'
-              }}>
-                {uploadResult.success > 0 && (
-                  <span style={{ color: '#4CAF50', fontWeight: '600' }}>
-                    ✓ {uploadResult.success}개 성공
-                  </span>
-                )}
-                {uploadResult.failed > 0 && (
-                  <span style={{ color: '#F44336', fontWeight: '600' }}>
-                    ✗ {uploadResult.failed}개 실패
-                  </span>
-                )}
-              </div>
-
-              <p style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                3초 후 자동으로 닫힙니다...
-              </p>
-
-              <style>{`
-                @keyframes scaleIn {
-                  from { transform: scale(0); opacity: 0; }
-                  to { transform: scale(1); opacity: 1; }
-                }
-              `}</style>
-            </div>
-          )}
-
           {/* Drop Zone */}
-          {!uploadSuccess && selectedFiles.length === 0 && (
+          {selectedFiles.length === 0 && (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -444,7 +255,7 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
           />
 
           {/* Selected Files */}
-          {!uploadSuccess && selectedFiles.length > 0 && (
+          {selectedFiles.length > 0 && (
             <div style={{ marginTop: '16px' }}>
               <div style={{
                 display: 'flex',
@@ -455,186 +266,139 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
                 <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>
                   선택된 파일 ({selectedFiles.length})
                 </h3>
-                {!uploading && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      padding: '6px 12px',
-                      background: 'var(--primary)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    + 추가
-                  </button>
-                )}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: '6px 12px',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  + 추가
+                </button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {selectedFiles.map((file, index) => {
-                  const progress = uploadProgress[index] || 0;
-                  const isCompleted = progress === 100;
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '12px',
+                      background: 'var(--background)',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}
+                  >
+                    {/* File Icon */}
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: file.type.startsWith('image/') ? '#E8F0FE' : '#FEE2E2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '20px',
+                      flexShrink: 0
+                    }}>
+                      {file.type.startsWith('image/') ? '🖼️' : '🎬'}
+                    </div>
 
-                  return (
-                    <div
-                      key={index}
+                    {/* File Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        marginBottom: '4px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {file.name}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        {formatFileSize(file.size)}
+                      </div>
+
+                      {/* Tags Input */}
+                      <div style={{ marginTop: '8px' }}>
+                        <div style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '4px',
+                          padding: '6px',
+                          background: 'var(--surface)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border)',
+                          minHeight: '32px',
+                          alignItems: 'center'
+                        }}>
+                          {(fileTags[index]?.tags || []).map((tag, tagIndex) => (
+                            <span
+                              key={tagIndex}
+                              style={{
+                                background: 'var(--primary)',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              #{tag}
+                              <X
+                                size={12}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => removeTag(index, tag)}
+                              />
+                            </span>
+                          ))}
+                          <input
+                            type="text"
+                            value={fileTags[index]?.input || ''}
+                            onChange={(e) => handleTagInput(index, e.target.value)}
+                            onKeyDown={(e) => handleTagKeyDown(index, e)}
+                            placeholder={(fileTags[index]?.tags || []).length === 0 ? '태그 입력 (쉼표로 구분)' : ''}
+                            style={{
+                              flex: 1,
+                              minWidth: '100px',
+                              border: 'none',
+                              outline: 'none',
+                              background: 'transparent',
+                              fontSize: '12px',
+                              padding: '2px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Remove Button */}
+                    <button
+                      onClick={() => removeFile(index)}
                       style={{
-                        padding: '12px',
-                        background: 'var(--background)',
-                        borderRadius: 'var(--radius-sm)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px'
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        color: 'var(--text-secondary)'
                       }}
                     >
-                      {/* File Icon */}
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: 'var(--radius-sm)',
-                        background: file.type.startsWith('image/') ? '#E8F0FE' : '#FEE2E2',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                        flexShrink: 0
-                      }}>
-                        {file.type.startsWith('image/') ? '🖼️' : '🎬'}
-                      </div>
-
-                      {/* File Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          marginBottom: '4px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {file.name}
-                        </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}>
-                          <span>{formatFileSize(file.size)}</span>
-                          {uploading && (
-                            <span style={{
-                              color: isCompleted ? '#4CAF50' : 'var(--primary)',
-                              fontWeight: '700',
-                              fontSize: '13px'
-                            }}>
-                              {isCompleted ? '✓ 완료' : `${progress}%`}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Progress Bar */}
-                        {uploading && (
-                          <div style={{
-                            marginTop: '8px',
-                            height: '6px',
-                            background: '#e0e0e0',
-                            borderRadius: '3px',
-                            overflow: 'hidden',
-                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
-                          }}>
-                            <div style={{
-                              width: `${progress}%`,
-                              height: '100%',
-                              background: isCompleted
-                                ? 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%)'
-                                : 'linear-gradient(90deg, var(--primary) 0%, #4f9cf9 100%)',
-                              transition: 'width 0.3s ease',
-                              boxShadow: isCompleted ? '0 1px 3px rgba(76, 175, 80, 0.3)' : '0 1px 3px rgba(26, 115, 232, 0.3)'
-                            }} />
-                          </div>
-                        )}
-
-                        {/* Tags Input */}
-                        {!uploading && (
-                          <div style={{ marginTop: '8px' }}>
-                            <div style={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: '4px',
-                              padding: '6px',
-                              background: 'var(--surface)',
-                              borderRadius: 'var(--radius-sm)',
-                              border: '1px solid var(--border)',
-                              minHeight: '32px',
-                              alignItems: 'center'
-                            }}>
-                              {(fileTags[index]?.tags || []).map((tag, tagIndex) => (
-                                <span
-                                  key={tagIndex}
-                                  style={{
-                                    background: 'var(--primary)',
-                                    color: 'white',
-                                    padding: '2px 8px',
-                                    borderRadius: '12px',
-                                    fontSize: '11px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                  }}
-                                >
-                                  #{tag}
-                                  <X
-                                    size={12}
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => removeTag(index, tag)}
-                                  />
-                                </span>
-                              ))}
-                              <input
-                                type="text"
-                                value={fileTags[index]?.input || ''}
-                                onChange={(e) => handleTagInput(index, e.target.value)}
-                                onKeyDown={(e) => handleTagKeyDown(index, e)}
-                                placeholder={(fileTags[index]?.tags || []).length === 0 ? '태그 입력 (쉼표로 구분)' : ''}
-                                style={{
-                                  flex: 1,
-                                  minWidth: '100px',
-                                  border: 'none',
-                                  outline: 'none',
-                                  background: 'transparent',
-                                  fontSize: '12px',
-                                  padding: '2px'
-                                }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Action Button */}
-                      {!uploading ? (
-                        <button
-                          onClick={() => removeFile(index)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '4px',
-                            color: 'var(--text-secondary)'
-                          }}
-                        >
-                          <X size={18} />
-                        </button>
-                      ) : isCompleted ? (
-                        <Check size={20} color="#4CAF50" />
-                      ) : null}
-                    </div>
-                  );
-                })}
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -672,58 +436,33 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
         }}>
           <button
             onClick={onClose}
-            disabled={uploading}
             style={{
               padding: '10px 20px',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-sm)',
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              opacity: uploading ? 0.5 : 1
+              cursor: 'pointer',
+              fontSize: '14px'
             }}
           >
             취소
           </button>
           <button
-            onClick={(e) => {
-              console.log('Upload button clicked (event)');
-              handleUpload();
-            }}
-            disabled={selectedFiles.length === 0 || uploading}
+            onClick={handleUpload}
+            disabled={selectedFiles.length === 0}
             style={{
               padding: '10px 20px',
-              background: selectedFiles.length === 0 || uploading ? '#ccc' : 'var(--primary)',
+              background: selectedFiles.length === 0 ? '#ccc' : 'var(--primary)',
               color: 'white',
               border: 'none',
               borderRadius: 'var(--radius-sm)',
-              cursor: selectedFiles.length === 0 || uploading ? 'not-allowed' : 'pointer',
+              cursor: selectedFiles.length === 0 ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              fontWeight: '500',
-              position: 'relative'
+              fontWeight: '500'
             }}
           >
-            {uploading ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid white',
-                  borderTopColor: 'transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                업로드 중...
-              </div>
-            ) : (
-              `업로드 (${selectedFiles.length})`
-            )}
+            업로드 ({selectedFiles.length})
           </button>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
         </div>
       </div>
     </div>
