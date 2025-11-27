@@ -493,11 +493,6 @@ export const fileValidation = {
   },
 
   /**
-   * 최대 파일 크기 (100MB)
-   */
-  MAX_FILE_SIZE: 100 * 1024 * 1024,
-
-  /**
    * 파일 타입 검증
    *
    * @param {File} file
@@ -512,16 +507,6 @@ export const fileValidation = {
   },
 
   /**
-   * 파일 크기 검증
-   *
-   * @param {File} file
-   * @returns {boolean}
-   */
-  isValidSize(file) {
-    return file.size <= this.MAX_FILE_SIZE;
-  },
-
-  /**
    * 전체 검증
    *
    * @param {File} file
@@ -532,13 +517,6 @@ export const fileValidation = {
       return {
         valid: false,
         error: `지원하지 않는 파일 형식입니다. (${file.type})`,
-      };
-    }
-
-    if (!this.isValidSize(file)) {
-      return {
-        valid: false,
-        error: `파일 크기가 너무 큽니다. (최대 100MB)`,
       };
     }
 
