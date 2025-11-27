@@ -1401,18 +1401,26 @@ const Gallery = () => {
                                     다운로드
                                 </button>
                             )}
-                            {/* Close Button */}
+                            {/* Back/Close Button */}
                             <button
                                 onClick={() => setPlayingVideo(null)}
                                 style={{
-                                    background: 'none',
-                                    border: 'none',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '8px',
                                     color: 'white',
                                     cursor: 'pointer',
-                                    padding: '8px'
+                                    padding: '8px 12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '500'
                                 }}
                             >
-                                <X size={28} />
+                                <ChevronLeft size={18} />
+                                뒤로가기
                             </button>
                         </div>
                         <video
@@ -1436,6 +1444,13 @@ const Gallery = () => {
                         setViewingImage(null);
                         setImageLoading(true);
                     }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                            setViewingImage(null);
+                            setImageLoading(true);
+                        }
+                    }}
+                    tabIndex={0}
                     style={{
                         position: 'fixed',
                         top: 0,
@@ -1514,21 +1529,29 @@ const Gallery = () => {
                                     다운로드
                                 </button>
                             )}
-                            {/* Close Button */}
+                            {/* Back/Close Button */}
                             <button
                                 onClick={() => {
                                     setViewingImage(null);
                                     setImageLoading(true);
                                 }}
                                 style={{
-                                    background: 'none',
-                                    border: 'none',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '8px',
                                     color: 'white',
                                     cursor: 'pointer',
-                                    padding: '8px'
+                                    padding: '8px 12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '500'
                                 }}
                             >
-                                <X size={28} />
+                                <ChevronLeft size={18} />
+                                뒤로가기
                             </button>
                         </div>
 

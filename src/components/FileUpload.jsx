@@ -7,6 +7,8 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
   const [fileTags, setFileTags] = useState({}); // { fileIndex: [tags] }
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
   const [errors, setErrors] = useState([]);
   const fileInputRef = useRef(null);
 
@@ -170,19 +172,30 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
 
       console.log('Upload completed successfully', results);
 
-      // 업로드 완료
+      // 업로드 완료 결과 저장
+      setUploadSuccess(true);
+      setUploadResult({
+        total: results.length,
+        success: results.filter(r => r.file_id).length,
+        failed: results.filter(r => !r.file_id).length
+      });
+
+      // 업로드 완료 콜백
       if (onUploadComplete) {
         onUploadComplete(results);
       }
 
-      // 초기화
-      setSelectedFiles([]);
-      setUploadProgress({});
-      setFileTags({});
-
-      if (onClose) {
-        onClose();
-      }
+      // 3초 후 자동 닫기
+      setTimeout(() => {
+        setSelectedFiles([]);
+        setUploadProgress({});
+        setFileTags({});
+        setUploadSuccess(false);
+        setUploadResult(null);
+        if (onClose) {
+          onClose();
+        }
+      }, 3000);
     } catch (error) {
       console.error('Upload failed:', error);
       let errorMessage = '업로드에 실패했습니다.';
@@ -320,8 +333,80 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
           overflowY: 'auto',
           padding: '20px'
         }}>
+          {/* Upload Success Screen */}
+          {uploadSuccess && uploadResult && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '60px 20px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: uploadResult.failed === 0 ? '#E6F4EA' : '#FFF8E1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '24px',
+                animation: 'scaleIn 0.3s ease-out'
+              }}>
+                <Check size={40} color={uploadResult.failed === 0 ? '#4CAF50' : '#FBBC04'} strokeWidth={3} />
+              </div>
+
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+                marginBottom: '12px'
+              }}>
+                {uploadResult.failed === 0 ? '업로드 완료!' : '업로드 완료 (일부 실패)'}
+              </h2>
+
+              <p style={{
+                fontSize: '16px',
+                color: 'var(--text-secondary)',
+                marginBottom: '8px'
+              }}>
+                총 {uploadResult.total}개 파일
+              </p>
+
+              <div style={{
+                display: 'flex',
+                gap: '16px',
+                fontSize: '14px',
+                marginBottom: '24px'
+              }}>
+                {uploadResult.success > 0 && (
+                  <span style={{ color: '#4CAF50', fontWeight: '600' }}>
+                    ✓ {uploadResult.success}개 성공
+                  </span>
+                )}
+                {uploadResult.failed > 0 && (
+                  <span style={{ color: '#F44336', fontWeight: '600' }}>
+                    ✗ {uploadResult.failed}개 실패
+                  </span>
+                )}
+              </div>
+
+              <p style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                3초 후 자동으로 닫힙니다...
+              </p>
+
+              <style>{`
+                @keyframes scaleIn {
+                  from { transform: scale(0); opacity: 0; }
+                  to { transform: scale(1); opacity: 1; }
+                }
+              `}</style>
+            </div>
+          )}
+
           {/* Drop Zone */}
-          {selectedFiles.length === 0 && (
+          {!uploadSuccess && selectedFiles.length === 0 && (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -359,7 +444,7 @@ const FileUpload = ({ onUploadComplete, onClose }) => {
           />
 
           {/* Selected Files */}
-          {selectedFiles.length > 0 && (
+          {!uploadSuccess && selectedFiles.length > 0 && (
             <div style={{ marginTop: '16px' }}>
               <div style={{
                 display: 'flex',
