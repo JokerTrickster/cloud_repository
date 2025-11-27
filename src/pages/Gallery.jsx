@@ -412,15 +412,15 @@ const Gallery = () => {
 
                 transformedFiles = favoritesData.map(file => ({
                     id: file.id,
-                    name: file.fileName || file.file_name,
-                    url: file.thumbnailUrl || file.thumbnail_url || file.downloadUrl || file.download_url || `https://via.placeholder.com/300?text=${file.fileName || file.file_name}`,
-                    originalUrl: file.downloadUrl || file.download_url,
-                    type: (file.contentType || file.content_type || '').startsWith('image/') ? 'image' : 'video',
-                    date: format(parseISO(file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd'),
+                    name: file.file_name || file.fileName,
+                    url: file.thumbnail_url || file.thumbnailUrl || file.download_url || file.downloadUrl || `https://via.placeholder.com/300?text=${file.file_name || file.fileName}`,
+                    originalUrl: file.download_url || file.downloadUrl,
+                    type: (file.content_type || file.contentType || file.file_type || '').startsWith('image/') ? 'image' : 'video',
+                    date: format(parseISO(file.created_at || file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd'),
                     tags: file.tags ? file.tags.map(t => t.name || t) : [],
                     duration: file.duration || null,
-                    size: file.fileSize || file.file_size,
-                    created_at: file.uploadedAt || file.uploaded_at,
+                    size: file.file_size || file.fileSize,
+                    created_at: file.created_at || file.uploadedAt || file.uploaded_at,
                     isFavorite: true, // 즐겨찾기 목록이므로 모두 true
                 }));
             } else {
