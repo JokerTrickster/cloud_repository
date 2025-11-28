@@ -59,6 +59,9 @@ const fileApi = {
       headers: {
         'Content-Type': file.type,
       },
+      timeout: 0, // 타임아웃 없음 (대용량 동영상 업로드 지원)
+      maxContentLength: Infinity, // 최대 컨텐츠 크기 제한 없음
+      maxBodyLength: Infinity, // 최대 바디 크기 제한 없음
       onUploadProgress: (progressEvent) => {
         if (onProgress) {
           const percentCompleted = Math.round(
@@ -212,7 +215,8 @@ const fileApi = {
             await axios.put(result.thumbnail_upload_url, thumbnail, {
               headers: {
                 'Content-Type': 'image/jpeg',
-              }
+              },
+              timeout: 30000, // 30초 타임아웃 (썸네일은 작은 파일)
             });
           }
         } catch (err) {
