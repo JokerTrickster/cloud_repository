@@ -175,6 +175,11 @@ const fileApi = {
     const uploadPromises = batchResponse.results.map(async (result, index) => {
       const file = files[index];
 
+      // 초기 상태: 업로드 중
+      if (onProgress) {
+        onProgress(index, 0, 'uploading');
+      }
+
       // 원본 파일 업로드 (진행률 0-80%)
       await this.uploadToS3(
         result.upload_url,
@@ -182,32 +187,27 @@ const fileApi = {
         (progress) => {
           if (onProgress) {
             // 원본 업로드는 전체의 80%
-            onProgress(index, Math.round(progress * 0.8));
+            onProgress(index, Math.round(progress * 0.8), 'uploading');
           }
         }
       );
 
       // 썸네일 생성 및 업로드 (진행률 80-100%)
       if (result.thumbnail_upload_url) {
+        if (onProgress) {
+          onProgress(index, 80, 'processing');
+        }
         try {
           let thumbnail = null;
-
-          // 이미지 썸네일 생성
-          if (file.type.startsWith('image/')) {
-            thumbnail = await generateThumbnail(file, {
-              maxWidth: 200,
-              maxHeight: 200,
-              quality: 0.8
-            });
-          }
-          // 비디오 썸네일 생성 (첫 프레임 캡처)
-          else if (file.type.startsWith('video/')) {
-            thumbnail = await generateVideoThumbnail(file, {
-              maxWidth: 200,
-              maxHeight: 200,
-              quality: 0.8,
-              seekTime: 1 // 1초 시점 캡처
-            });
+          if (file.type.startsWith('video/')) {
+            // 동영상 썸네일 생성
+            // duration이 있으면 seekTime을 중간으로 설정, 없으면 1초
+            const duration = durations[index];
+            const seekTime = duration ? duration / 2 : 1;
+            thumbnail = await generateVideoThumbnail(file, { seekTime });
+          } else if (file.type.startsWith('image/')) {
+            // 이미지 썸네일 생성
+            thumbnail = await generateThumbnail(file);
           }
 
           if (thumbnail) {
@@ -227,7 +227,7 @@ const fileApi = {
 
       // 최종 진행률 100%
       if (onProgress) {
-        onProgress(index, 100);
+        onProgress(index, 100, 'completed');
       }
 
       return {

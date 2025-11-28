@@ -25,7 +25,12 @@ export async function generateThumbnail(file, options = {}) {
     return null;
   }
 
-  return new Promise((resolve, reject) => {
+  // 10초 타임아웃 설정
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Image thumbnail generation timed out')), 10000);
+  });
+
+  const thumbnailPromise = new Promise((resolve, reject) => {
     const reader = new FileReader();
 
     reader.onload = (e) => {
@@ -83,6 +88,8 @@ export async function generateThumbnail(file, options = {}) {
 
     reader.readAsDataURL(file);
   });
+
+  return Promise.race([thumbnailPromise, timeoutPromise]);
 }
 
 /**
@@ -123,7 +130,12 @@ export async function generateVideoThumbnail(file, options = {}) {
     return null;
   }
 
-  return new Promise((resolve, reject) => {
+  // 10초 타임아웃 설정
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Video thumbnail generation timed out')), 10000);
+  });
+
+  const thumbnailPromise = new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.muted = true;
@@ -189,6 +201,8 @@ export async function generateVideoThumbnail(file, options = {}) {
     const url = URL.createObjectURL(file);
     video.src = url;
   });
+
+  return Promise.race([thumbnailPromise, timeoutPromise]);
 }
 
 /**
@@ -203,7 +217,12 @@ export async function getVideoDuration(file) {
     return null;
   }
 
-  return new Promise((resolve, reject) => {
+  // 10초 타임아웃 설정
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Video duration extraction timed out')), 10000);
+  });
+
+  const durationPromise = new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.muted = true;
@@ -225,6 +244,8 @@ export async function getVideoDuration(file) {
     const url = URL.createObjectURL(file);
     video.src = url;
   });
+
+  return Promise.race([durationPromise, timeoutPromise]);
 }
 
 /**

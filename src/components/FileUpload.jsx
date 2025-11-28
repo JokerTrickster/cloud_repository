@@ -142,21 +142,10 @@ const FileUpload = ({ onUploadStart, onClose }) => {
       return;
     }
 
-    // 업로드 함수 생성 (백그라운드 실행용)
-    const uploadFn = (onProgress) => {
-      return fileApi.uploadBatchFiles(
-        selectedFiles,
-        onProgress,
-        fileTags
-      );
-    };
-
-    // Gallery로 업로드 시작 알림
+    // Gallery로 파일 정보 전달
     if (onUploadStart) {
-      onUploadStart(selectedFiles, fileTags, uploadFn);
+      onUploadStart(selectedFiles, fileTags);
     }
-
-    // 모달은 Gallery의 handleUploadStart에서 닫음
   };
 
   return (
