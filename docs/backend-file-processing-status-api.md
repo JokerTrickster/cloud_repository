@@ -205,6 +205,80 @@ POST /api/v1/files/processing-status/batch
 
 ---
 
+## ⚠️ 중요: 기존 파일 목록 API 수정 필요
+
+### GET /api/v1/files (기존 API 수정)
+
+**변경사항**: 응답에 처리 상태 필드 추가
+
+**기존 응답:**
+```json
+{
+  "files": [
+    {
+      "id": 123,
+      "file_name": "video.mp4",
+      "file_type": "video",
+      "file_size": 53477376,
+      "thumbnail_url": "https://s3.../thumbnail.jpg",
+      "url": "https://s3.../video.mp4",
+      "duration": 125,
+      "created_at": "2025-12-01T10:30:00Z"
+    }
+  ],
+  "total_count": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+**수정 후 응답:**
+```json
+{
+  "files": [
+    {
+      "id": 123,
+      "file_name": "video.mp4",
+      "file_type": "video",
+      "file_size": 53477376,
+      "thumbnail_url": "https://s3.../thumbnail.jpg",
+      "url": "https://s3.../video.mp4",
+      "duration": 125,
+      "created_at": "2025-12-01T10:30:00Z",
+
+      // ✨ 추가 필드
+      "processing_status": "completed",  // "pending" | "processing" | "completed" | "failed"
+      "processing_progress": 100,        // 0-100 (optional, 처리 중일 때만)
+      "processing_stage": "done"         // (optional, 처리 중일 때만)
+    }
+  ],
+  "total_count": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+**추가 필드 설명:**
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `processing_status` | string | ✅ 필수 | 처리 상태: `pending`, `processing`, `completed`, `failed` |
+| `processing_progress` | integer | ⚪ 선택 | 진행률 (0-100), `processing` 상태일 때 권장 |
+| `processing_stage` | string | ⚪ 선택 | 처리 단계, `processing` 상태일 때 권장 |
+
+**기본값 처리:**
+- 이미지 파일: 업로드 즉시 `completed` (처리 불필요)
+- 비디오 파일 (작은 크기): 빠르게 처리 완료 → `completed`
+- 비디오 파일 (대용량): `processing` → 백그라운드 처리 → `completed`
+- 처리 실패: `failed` (에러 정보는 별도 API로 조회 가능)
+
+**중요:**
+- 이 수정으로 프론트엔드는 **언제 접속해도** 파일의 처리 상태를 확인할 수 있습니다
+- 추가 API 호출 없이 파일 목록만으로 처리 상태 표시 가능
+- 처리 중인 파일만 자동으로 폴링 시작
+
+---
+
 ## 데이터베이스 스키마 권장사항
 
 기존 `files` 테이블에 다음 컬럼 추가를 권장합니다:
