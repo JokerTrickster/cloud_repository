@@ -2,14 +2,18 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Upload UI Tests', () => {
     test.beforeEach(async ({ page }) => {
-        // Mock authentication
-        await page.goto('/login');
-        await page.evaluate(() => {
+        // Mock authentication BEFORE any page load
+        await page.addInitScript(() => {
             localStorage.setItem('accessToken', 'mock-access-token');
             localStorage.setItem('refreshToken', 'mock-refresh-token');
         });
 
-        // Mock API endpoints
+        // Block WebSocket connections entirely
+        await page.route('**/ws*', route => route.abort());
+        await page.route('ws://**', route => route.abort());
+        await page.route('wss://**', route => route.abort());
+
+        // Mock batch upload endpoint first (more specific route)
         await page.route('**/api/v1/files/upload/batch', async route => {
             console.log('Mock hit: /api/v1/files/upload/batch');
             await route.fulfill({
@@ -17,6 +21,44 @@ test.describe('Upload UI Tests', () => {
                     results: [
                         { file_id: 1, s3_key: 'key1', upload_url: 'http://mock-s3-url/1' }
                     ]
+                }
+            });
+        });
+
+        // Mock file listing endpoint (general route)
+        await page.route('**/api/v1/files', async route => {
+            console.log('Mock hit: /api/v1/files (listing)');
+            await route.fulfill({
+                json: {
+                    files: [],
+                    total_count: 0,
+                    page: 1,
+                    page_size: 20
+                }
+            });
+        });
+
+        // Mock user stats endpoint
+        await page.route('**/api/v1/user/stats', async route => {
+            console.log('Mock hit: /api/v1/user/stats');
+            await route.fulfill({
+                json: {
+                    storage: {
+                        used: 0,
+                        total: 1073741824, // 1GB
+                        used_percentage: 0
+                    },
+                    file_count: 0
+                }
+            });
+        });
+
+        // Mock user activity endpoint
+        await page.route('**/api/v1/user/activity*', async route => {
+            console.log('Mock hit: /api/v1/user/activity');
+            await route.fulfill({
+                json: {
+                    activities: []
                 }
             });
         });
@@ -30,7 +72,13 @@ test.describe('Upload UI Tests', () => {
     });
 
     test('should show loading indicator and result summary', async ({ page }) => {
+        // First navigate to a route that works (gallery) to ensure app loads
+        await page.goto('/gallery');
+        await page.waitForLoadState('networkidle');
+
+        // Then navigate to upload
         await page.goto('/upload');
+        await page.waitForLoadState('networkidle');
 
         // Create a dummy file
         const buffer = Buffer.from('dummy content');

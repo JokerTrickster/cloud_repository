@@ -5,6 +5,8 @@ import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, su
 import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
+import ProcessingIndicator from '../components/ProcessingIndicator';
+import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 import { formatDuration } from '../utils/thumbnail';
 
 // Memoized Gallery Item Component with Lazy Loading
@@ -211,6 +213,21 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 </>
             )}
 
+            {/* Processing Indicator - 처리 중/실패 상태 표시 */}
+            {(file.processing_status === 'processing' ||
+              file.processing_status === 'pending' ||
+              file.processing_status === 'failed') && (
+                <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    maxWidth: 'calc(100% - 16px)',
+                    zIndex: 3
+                }}>
+                    <ProcessingIndicator file={file} compact={true} />
+                </div>
+            )}
+
             {/* Tag Overlay - Hide on hover for cleaner view */}
             {!isHovered && (
                 <div style={{
@@ -382,6 +399,59 @@ const Gallery = () => {
             window.removeEventListener('file:processed', handleFileProcessed);
         };
     }, []);
+
+    // 파일 처리 상태 업데이트 핸들러
+    const handleProcessingStatusUpdate = useCallback((statusResults) => {
+        setFiles(prevFiles => {
+            const updatedFiles = [...prevFiles];
+            let hasChanges = false;
+
+            statusResults.forEach(status => {
+                const index = updatedFiles.findIndex(f => f.id === status.file_id);
+                if (index !== -1) {
+                    const file = updatedFiles[index];
+
+                    // 상태가 변경된 경우에만 업데이트
+                    if (
+                        file.processing_status !== status.status ||
+                        file.processing_progress !== status.progress ||
+                        file.processing_stage !== status.stage
+                    ) {
+                        updatedFiles[index] = {
+                            ...file,
+                            processing_status: status.status,
+                            processing_progress: status.progress,
+                            processing_stage: status.stage,
+                            processing_error: status.error,
+                        };
+                        hasChanges = true;
+
+                        // 완료된 경우 썸네일 URL 업데이트
+                        if (status.status === 'completed' && status.thumbnail_url) {
+                            updatedFiles[index].thumbnail_url = status.thumbnail_url;
+                            updatedFiles[index].url = status.thumbnail_url;
+                        }
+                    }
+                }
+            });
+
+            // 모든 파일이 완료되면 갤러리 새로고침
+            const allCompleted = statusResults.every(s => s.status === 'completed' || s.status === 'failed');
+            if (allCompleted && hasChanges) {
+                console.log('[Gallery] All files processed, reloading gallery');
+                setTimeout(() => loadFiles(), 1000);
+            }
+
+            return hasChanges ? updatedFiles : prevFiles;
+        });
+    }, []);
+
+    // 파일 처리 상태 모니터링 시작
+    useFileProcessingMonitor(files, handleProcessingStatusUpdate, {
+        enabled: true,
+        interval: 5000, // 5초마다 폴링
+        maxDuration: 600000, // 최대 10분
+    });
 
     const loadFiles = async () => {
         setLoading(true);

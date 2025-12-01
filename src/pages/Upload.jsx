@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Upload as UploadIcon, X, Plus } from 'lucide-react';
 import fileApi from '../api/fileApi';
+import ProcessingIndicator from '../components/ProcessingIndicator';
+import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 
 const Upload = () => {
     const [files, setFiles] = useState([]);
@@ -9,6 +11,7 @@ const Upload = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadResult, setUploadResult] = useState(null);
+    const [uploadedFiles, setUploadedFiles] = useState([]); // 업로드된 파일 목록 (처리 상태 추적용)
 
     const handleFileChange = (e) => {
         if (e.target.files) {
@@ -31,6 +34,37 @@ const Upload = () => {
     const removeTag = (tagToRemove) => {
         setTags(tags.filter(tag => tag !== tagToRemove));
     };
+
+    // 파일 처리 상태 업데이트 핸들러
+    const handleProcessingStatusUpdate = useCallback((statusResults) => {
+        setUploadedFiles(prevFiles => {
+            const updatedFiles = [...prevFiles];
+            let hasChanges = false;
+
+            statusResults.forEach(status => {
+                const index = updatedFiles.findIndex(f => f.id === status.file_id);
+                if (index !== -1) {
+                    updatedFiles[index] = {
+                        ...updatedFiles[index],
+                        processing_status: status.status,
+                        processing_progress: status.progress,
+                        processing_stage: status.stage,
+                        processing_error: status.error,
+                    };
+                    hasChanges = true;
+                }
+            });
+
+            return hasChanges ? updatedFiles : prevFiles;
+        });
+    }, []);
+
+    // 파일 처리 상태 모니터링
+    useFileProcessingMonitor(uploadedFiles, handleProcessingStatusUpdate, {
+        enabled: uploadedFiles.length > 0,
+        interval: 3000, // 3초마다 폴링 (업로드 페이지는 좀 더 빠르게)
+        maxDuration: 600000, // 최대 10분
+    });
 
     const handleUpload = async () => {
         if (files.length === 0) {
@@ -83,6 +117,18 @@ const Upload = () => {
                 failed: failedCount,
                 total: results.length
             });
+
+            // 업로드된 파일 목록 저장 (처리 상태 추적용)
+            const uploadedFileList = results
+                .filter(r => r.file_id)
+                .map(r => ({
+                    id: r.file_id,
+                    file_name: r.file_name,
+                    processing_status: r.processing_status || 'processing',
+                    processing_progress: 0,
+                    processing_stage: null,
+                }));
+            setUploadedFiles(uploadedFileList);
 
             setFiles([]);
             setTags([]);
@@ -301,7 +347,10 @@ const Upload = () => {
                         총 {uploadResult.total}개 중 {uploadResult.success}개 성공, {uploadResult.failed}개 실패
                     </p>
                     <button
-                        onClick={() => setUploadResult(null)}
+                        onClick={() => {
+                            setUploadResult(null);
+                            setUploadedFiles([]);
+                        }}
                         style={{
                             padding: '12px 24px',
                             background: 'var(--primary)',
@@ -313,6 +362,49 @@ const Upload = () => {
                     >
                         추가 업로드하기
                     </button>
+                </div>
+            )}
+
+            {/* 파일 처리 상태 */}
+            {uploadedFiles.length > 0 && (
+                <div style={{
+                    marginTop: '24px',
+                    padding: '20px',
+                    background: 'var(--surface)',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--border)'
+                }}>
+                    <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                        파일 처리 상태
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {uploadedFiles.map((file) => (
+                            <div key={file.id} style={{
+                                padding: '12px',
+                                background: 'var(--surface-secondary)',
+                                borderRadius: 'var(--radius)',
+                                border: '1px solid var(--border)'
+                            }}>
+                                <div style={{
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    marginBottom: '8px',
+                                    color: 'var(--text-primary)'
+                                }}>
+                                    {file.file_name}
+                                </div>
+                                <ProcessingIndicator file={file} compact={false} />
+                            </div>
+                        ))}
+                    </div>
+                    <p style={{
+                        marginTop: '16px',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                        textAlign: 'center'
+                    }}>
+                        대용량 파일은 백그라운드에서 처리됩니다. 갤러리에서 처리 상태를 확인할 수 있습니다.
+                    </p>
                 </div>
             )}
         </div>

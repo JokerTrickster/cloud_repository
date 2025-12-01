@@ -497,6 +497,35 @@ export const fileValidation = {
       errors,
     };
   },
+
+  /**
+   * 파일 처리 상태 조회
+   * GET /files/:id/processing-status
+   *
+   * @param {number} fileId - 파일 ID
+   * @returns {Promise<Object>} 처리 상태 정보
+   */
+  async getProcessingStatus(fileId) {
+    const { data } = await client.get(`/api/v1/files/${fileId}/processing-status`, {
+      baseURL: import.meta.env.VITE_FILE_API_URL
+    });
+    return data;
+  },
+
+  /**
+   * 배치 파일 처리 상태 조회
+   * POST /files/processing-status/batch
+   *
+   * @param {Array<number>} fileIds - 파일 ID 배열
+   * @returns {Promise<Object>} { results: Array<Object> }
+   */
+  async getBatchProcessingStatus(fileIds) {
+    const { data } = await client.post('/api/v1/files/processing-status/batch',
+      { file_ids: fileIds },
+      { baseURL: import.meta.env.VITE_FILE_API_URL }
+    );
+    return data;
+  },
 };
 
 export default fileApi;
