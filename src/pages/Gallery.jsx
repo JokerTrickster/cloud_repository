@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, memo, useRef } from 'react';
+import React, { useState, useMemo, useEffect, memo, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download, Star, AlertCircle } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
