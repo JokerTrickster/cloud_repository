@@ -654,7 +654,7 @@ const Gallery = () => {
     const handleUploadStart = (files, fileTags, uploadFn) => {
         // 업로드 상태 초기화
         setUploadState({
-            files: files.map(f => f.name),
+            files: files.map(f => ({ name: f.name, size: f.size })),
             progress: {},
             total: files.length,
             completed: 0,
@@ -1839,6 +1839,25 @@ const Gallery = () => {
                                         transition: 'width 0.3s ease'
                                     }} />
                                 </div>
+
+                                {/* 대용량 파일 안내 메시지 */}
+                                {uploadState.files.some(f => f.size > 50 * 1024 * 1024) && (
+                                    <div style={{
+                                        marginTop: '12px',
+                                        padding: '8px 12px',
+                                        background: 'rgba(251, 188, 4, 0.1)',
+                                        borderLeft: '3px solid #FBBC04',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        color: 'var(--text-secondary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}>
+                                        <span style={{ fontSize: '14px' }}>💡</span>
+                                        <span>대용량 파일(50MB+)은 썸네일이 생성되지 않습니다</span>
+                                    </div>
+                                )}
                             </>
                         )}
 

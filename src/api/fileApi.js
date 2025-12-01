@@ -111,9 +111,19 @@ const fileApi = {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
+    // 대용량 파일 기준 (50MB)
+    const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024;
+
     // 1. 비디오 duration 추출 (병렬 처리, 타임아웃 3초)
-    const durationPromises = files.map(async (file) => {
+    // 큰 파일은 duration 추출 스킵하여 브라우저 부담 감소
+    const durationPromises = files.map(async (file, index) => {
       if (file.type.startsWith('video/')) {
+        // 대용량 파일은 duration 추출 스킵
+        if (file.size > LARGE_FILE_THRESHOLD) {
+          console.log(`[File ${index}] Large file detected (${(file.size / 1024 / 1024).toFixed(2)}MB), skipping duration extraction`);
+          return null;
+        }
+
         try {
           // 타임아웃 적용 (3초)
           const timeoutPromise = new Promise((_, reject) =>
@@ -174,21 +184,48 @@ const fileApi = {
     // 2. 각 파일을 S3에 업로드 (원본 + 썸네일)
     const uploadPromises = batchResponse.results.map(async (result, index) => {
       const file = files[index];
+      const isLargeFile = file.size > LARGE_FILE_THRESHOLD;
 
-      // 원본 파일 업로드 (진행률 0-80%)
+      // 초기 상태: 업로드 중
+      if (onProgress) {
+        onProgress(index, 0, 'uploading');
+      }
+
+      // 원본 파일 업로드
+      // 큰 파일은 업로드만 하므로 0-100%, 작은 파일은 썸네일도 있으므로 0-80%
       await this.uploadToS3(
         result.upload_url,
         file,
         (progress) => {
           if (onProgress) {
-            // 원본 업로드는 전체의 80%
-            onProgress(index, Math.round(progress * 0.8));
+            const percent = isLargeFile ? progress : Math.round(progress * 0.8);
+            onProgress(index, percent, 'uploading');
           }
         }
       );
 
-      // 썸네일 생성 및 업로드 (진행률 80-100%)
+      // 대용량 파일은 썸네일 생성 스킵
+      if (isLargeFile) {
+        console.log(`[File ${index}] Large file (${(file.size / 1024 / 1024).toFixed(2)}MB), skipping thumbnail generation`);
+
+        if (onProgress) {
+          onProgress(index, 100, 'completed');
+        }
+
+        return {
+          file_id: result.file_id,
+          s3_key: result.s3_key,
+          file_name: file.name,
+          thumbnail_skipped: true
+        };
+      }
+
+      // 작은 파일만 썸네일 생성 및 업로드 (진행률 80-100%)
       if (result.thumbnail_upload_url) {
+        if (onProgress) {
+          onProgress(index, 80, 'processing');
+        }
+
         try {
           let thumbnail = null;
 
@@ -200,13 +237,16 @@ const fileApi = {
               quality: 0.8
             });
           }
-          // 비디오 썸네일 생성 (첫 프레임 캡처)
+          // 비디오 썸네일 생성
           else if (file.type.startsWith('video/')) {
+            // duration이 있으면 중간 지점, 없으면 1초
+            const duration = durations[index];
+            const seekTime = duration ? duration / 2 : 1;
             thumbnail = await generateVideoThumbnail(file, {
               maxWidth: 200,
               maxHeight: 200,
               quality: 0.8,
-              seekTime: 1 // 1초 시점 캡처
+              seekTime
             });
           }
 
@@ -216,7 +256,7 @@ const fileApi = {
               headers: {
                 'Content-Type': 'image/jpeg',
               },
-              timeout: 30000, // 30초 타임아웃 (썸네일은 작은 파일)
+              timeout: 30000, // 30초 타임아웃
             });
           }
         } catch (err) {
@@ -227,7 +267,7 @@ const fileApi = {
 
       // 최종 진행률 100%
       if (onProgress) {
-        onProgress(index, 100);
+        onProgress(index, 100, 'completed');
       }
 
       return {
