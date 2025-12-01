@@ -1845,8 +1845,8 @@ const Gallery = () => {
                                     <div style={{
                                         marginTop: '12px',
                                         padding: '8px 12px',
-                                        background: 'rgba(251, 188, 4, 0.1)',
-                                        borderLeft: '3px solid #FBBC04',
+                                        background: 'rgba(26, 115, 232, 0.08)',
+                                        borderLeft: '3px solid var(--primary)',
                                         borderRadius: '4px',
                                         fontSize: '12px',
                                         color: 'var(--text-secondary)',
@@ -1854,8 +1854,8 @@ const Gallery = () => {
                                         alignItems: 'center',
                                         gap: '6px'
                                     }}>
-                                        <span style={{ fontSize: '14px' }}>💡</span>
-                                        <span>대용량 파일(50MB+)은 썸네일이 생성되지 않습니다</span>
+                                        <span style={{ fontSize: '14px' }}>⚡</span>
+                                        <span>대용량 파일(50MB+)은 첫 프레임으로 빠르게 썸네일 생성됩니다</span>
                                     </div>
                                 )}
                             </>

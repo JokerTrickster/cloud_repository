@@ -204,23 +204,8 @@ const fileApi = {
         }
       );
 
-      // 대용량 파일은 썸네일 생성 스킵
-      if (isLargeFile) {
-        console.log(`[File ${index}] Large file (${(file.size / 1024 / 1024).toFixed(2)}MB), skipping thumbnail generation`);
-
-        if (onProgress) {
-          onProgress(index, 100, 'completed');
-        }
-
-        return {
-          file_id: result.file_id,
-          s3_key: result.s3_key,
-          file_name: file.name,
-          thumbnail_skipped: true
-        };
-      }
-
-      // 작은 파일만 썸네일 생성 및 업로드 (진행률 80-100%)
+      // 썸네일 생성 및 업로드 (진행률 80-100%)
+      // 대용량 파일도 첫 프레임만 빠르게 캡처하여 썸네일 생성
       if (result.thumbnail_upload_url) {
         if (onProgress) {
           onProgress(index, 80, 'processing');
@@ -239,9 +224,17 @@ const fileApi = {
           }
           // 비디오 썸네일 생성
           else if (file.type.startsWith('video/')) {
-            // duration이 있으면 중간 지점, 없으면 1초
-            const duration = durations[index];
-            const seekTime = duration ? duration / 2 : 1;
+            // 대용량 파일은 첫 프레임(0초)만 캡처하여 빠르게 처리
+            // 작은 파일은 duration이 있으면 중간 지점, 없으면 1초
+            let seekTime = 1;
+            if (isLargeFile) {
+              seekTime = 0; // 첫 프레임만 빠르게 캡처
+              console.log(`[File ${index}] Large file (${(file.size / 1024 / 1024).toFixed(2)}MB), using first frame for thumbnail`);
+            } else {
+              const duration = durations[index];
+              seekTime = duration ? duration / 2 : 1;
+            }
+
             thumbnail = await generateVideoThumbnail(file, {
               maxWidth: 200,
               maxHeight: 200,
