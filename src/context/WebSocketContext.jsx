@@ -17,7 +17,7 @@ export const WebSocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('accessToken');
 
     if (!token) {
       console.log('[WebSocket] No access token, skipping connection');
