@@ -368,6 +368,21 @@ const Gallery = () => {
         }
     }, [location.search]);
 
+    // Listen for file:processed events from WebSocket
+    useEffect(() => {
+        const handleFileProcessed = (event) => {
+            console.log('[Gallery] File processed event received:', event.detail);
+            // Reload gallery to show the newly processed file
+            loadFiles();
+        };
+
+        window.addEventListener('file:processed', handleFileProcessed);
+
+        return () => {
+            window.removeEventListener('file:processed', handleFileProcessed);
+        };
+    }, []);
+
     const loadFiles = async () => {
         setLoading(true);
         setError('');
@@ -1854,8 +1869,8 @@ const Gallery = () => {
                                         alignItems: 'center',
                                         gap: '6px'
                                     }}>
-                                        <span style={{ fontSize: '14px' }}>⚡</span>
-                                        <span>대용량 파일(50MB+)은 첫 프레임으로 빠르게 썸네일 생성됩니다</span>
+                                        <span style={{ fontSize: '14px' }}>🔔</span>
+                                        <span>대용량 파일은 백그라운드에서 처리됩니다. 완료 시 알림을 받습니다.</span>
                                     </div>
                                 )}
                             </>

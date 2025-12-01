@@ -6,24 +6,29 @@ import Upload from './pages/Upload';
 import MyPage from './pages/MyPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { WebSocketProvider } from './context/WebSocketContext';
+import ProcessingToast from './components/ProcessingToast';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }>
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/mypage" element={<MyPage />} />
-        </Route>
-        <Route path="/" element={<Navigate to="/gallery" replace />} />
-      </Routes>
-    </Router>
+    <WebSocketProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
+            <Route path="/gallery" element={<Gallery />} />
+            <Route path="/upload" element={<Upload />} />
+            <Route path="/mypage" element={<MyPage />} />
+          </Route>
+          <Route path="/" element={<Navigate to="/gallery" replace />} />
+        </Routes>
+        <ProcessingToast />
+      </Router>
+    </WebSocketProvider>
   );
 }
 

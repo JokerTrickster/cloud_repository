@@ -111,46 +111,10 @@ const fileApi = {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
-    // 대용량 파일 기준 (50MB)
-    const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024;
+    // ❌ Duration 추출 제거됨 (백엔드에서 처리)
+    // ❌ 썸네일 생성 제거됨 (백엔드에서 처리)
 
-    // 1. 비디오 duration 추출 (병렬 처리, 타임아웃 3초)
-    // 큰 파일은 duration 추출 스킵하여 브라우저 부담 감소
-    const durationPromises = files.map(async (file, index) => {
-      if (file.type.startsWith('video/')) {
-        // 대용량 파일은 duration 추출 스킵
-        if (file.size > LARGE_FILE_THRESHOLD) {
-          console.log(`[File ${index}] Large file detected (${(file.size / 1024 / 1024).toFixed(2)}MB), skipping duration extraction`);
-          return null;
-        }
-
-        try {
-          // 타임아웃 적용 (3초)
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Duration extraction timeout')), 3000)
-          );
-
-          return await Promise.race([
-            getVideoDuration(file),
-            timeoutPromise
-          ]);
-        } catch (error) {
-          console.warn(`Failed to get duration for ${file.name}:`, error);
-          return null;
-        }
-      }
-      return null;
-    });
-
-    let durations = [];
-    try {
-      durations = await Promise.all(durationPromises);
-    } catch (error) {
-      console.warn('Duration extraction failed, continuing without durations:', error);
-      durations = files.map(() => null);
-    }
-
-    // 2. 배치 업로드 URL 요청 (태그 + duration 포함)
+    // 1. 배치 업로드 URL 요청 (태그만 포함)
     const fileInfos = files.map((file, index) => {
       const info = {
         file_name: file.name,
@@ -159,19 +123,10 @@ const fileApi = {
         file_size: file.size,
       };
 
-      // 태그와 duration은 서버가 지원하는 경우에만 포함
+      // 태그 추가
       const tags = fileTags[index]?.tags || [];
-      console.log(`[File ${index}] Tags from fileTags:`, tags);
       if (tags.length > 0) {
         info.tags = tags;
-        console.log(`[File ${index}] Tags added to request:`, info.tags);
-      } else {
-        console.log(`[File ${index}] No tags to add`);
-      }
-
-      if (durations[index]) {
-        info.duration = durations[index];
-        console.log(`[File ${index}] Duration:`, info.duration);
       }
 
       return info;
@@ -181,81 +136,36 @@ const fileApi = {
     const batchResponse = await this.requestBatchUploadUrl(fileInfos);
     console.log('✅ Batch upload response:', batchResponse);
 
-    // 2. 각 파일을 S3에 업로드 (원본 + 썸네일)
+    // 2. S3에 원본 파일만 업로드 (썸네일은 백엔드에서 처리)
     const uploadPromises = batchResponse.results.map(async (result, index) => {
       const file = files[index];
-      const isLargeFile = file.size > LARGE_FILE_THRESHOLD;
 
       // 초기 상태: 업로드 중
       if (onProgress) {
         onProgress(index, 0, 'uploading');
       }
 
-      // 원본 파일 업로드
-      // 큰 파일은 업로드만 하므로 0-100%, 작은 파일은 썸네일도 있으므로 0-80%
+      // S3에 원본 파일 업로드 (100% 진행률)
       await this.uploadToS3(
         result.upload_url,
         file,
         (progress) => {
           if (onProgress) {
-            const percent = isLargeFile ? progress : Math.round(progress * 0.8);
-            onProgress(index, percent, 'uploading');
+            onProgress(index, progress, 'uploading');
           }
         }
       );
 
-      // 썸네일 생성 및 업로드 (진행률 80-100%)
-      // 대용량 파일도 첫 프레임만 빠르게 캡처하여 썸네일 생성
-      if (result.thumbnail_upload_url) {
-        if (onProgress) {
-          onProgress(index, 80, 'processing');
-        }
-
-        try {
-          let thumbnail = null;
-
-          // 이미지 썸네일 생성
-          if (file.type.startsWith('image/')) {
-            thumbnail = await generateThumbnail(file, {
-              maxWidth: 200,
-              maxHeight: 200,
-              quality: 0.8
-            });
-          }
-          // 비디오 썸네일 생성
-          else if (file.type.startsWith('video/')) {
-            // 대용량 파일은 첫 프레임(0초)만 캡처하여 빠르게 처리
-            // 작은 파일은 duration이 있으면 중간 지점, 없으면 1초
-            let seekTime = 1;
-            if (isLargeFile) {
-              seekTime = 0; // 첫 프레임만 빠르게 캡처
-              console.log(`[File ${index}] Large file (${(file.size / 1024 / 1024).toFixed(2)}MB), using first frame for thumbnail`);
-            } else {
-              const duration = durations[index];
-              seekTime = duration ? duration / 2 : 1;
-            }
-
-            thumbnail = await generateVideoThumbnail(file, {
-              maxWidth: 200,
-              maxHeight: 200,
-              quality: 0.8,
-              seekTime
-            });
-          }
-
-          if (thumbnail) {
-            // 썸네일 업로드
-            await axios.put(result.thumbnail_upload_url, thumbnail, {
-              headers: {
-                'Content-Type': 'image/jpeg',
-              },
-              timeout: 30000, // 30초 타임아웃
-            });
-          }
-        } catch (err) {
-          console.warn(`Failed to upload thumbnail for ${file.name}:`, err);
-          // 썸네일 업로드 실패는 무시하고 계속 진행
-        }
+      // 업로드 완료 통지 (백엔드에서 백그라운드 처리 시작)
+      try {
+        console.log(`📡 Notifying upload completion for file ${result.file_id}...`);
+        await client.post(`/api/v1/files/${result.file_id}/complete-upload`, {}, {
+          baseURL: import.meta.env.VITE_FILE_API_URL
+        });
+        console.log(`✅ Upload completion notified for file ${result.file_id}`);
+      } catch (err) {
+        console.warn(`⚠️ Failed to notify upload completion for ${file.name}:`, err);
+        // 통지 실패는 경고만 하고 계속 진행
       }
 
       // 최종 진행률 100%
@@ -267,6 +177,8 @@ const fileApi = {
         file_id: result.file_id,
         s3_key: result.s3_key,
         file_name: file.name,
+        // 비디오는 백그라운드 처리 중
+        processing_status: file.type.startsWith('video/') ? 'processing' : 'completed'
       };
     });
 
