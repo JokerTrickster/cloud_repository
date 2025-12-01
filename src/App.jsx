@@ -6,24 +6,25 @@ import Upload from './pages/Upload';
 import MyPage from './pages/MyPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import { UploadProvider } from './context/UploadContext';
 
-const App = () => {
+function App() {
   return (
     <Router>
-      <UploadProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/gallery" replace />} />
-            <Route path="gallery" element={<Gallery />} />
-            <Route path="upload" element={<Upload />} />
-            <Route path="mypage" element={<MyPage />} />
-          </Route>
-        </Routes>
-      </UploadProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/mypage" element={<MyPage />} />
+        </Route>
+        <Route path="/" element={<Navigate to="/gallery" replace />} />
+      </Routes>
     </Router>
   );
-};
+}
 
 export default App;
