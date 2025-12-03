@@ -495,19 +495,32 @@ const Gallery = () => {
                 const favoritesData = result.data || result;
                 console.log('[Favorites] Favorites data:', favoritesData);
 
-                transformedFiles = favoritesData.map(file => ({
-                    id: file.id,
-                    name: file.file_name || file.fileName,
-                    url: file.thumbnail_url || file.thumbnailUrl || file.download_url || file.downloadUrl || `https://via.placeholder.com/300?text=${file.file_name || file.fileName}`,
-                    originalUrl: file.download_url || file.downloadUrl,
-                    type: (file.content_type || file.contentType || file.file_type || '').startsWith('image/') ? 'image' : 'video',
-                    date: format(parseISO(file.created_at || file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd'),
-                    tags: file.tags ? file.tags.map(t => t.name || t) : [],
-                    duration: file.duration || null,
-                    size: file.file_size || file.fileSize,
-                    created_at: file.created_at || file.uploadedAt || file.uploaded_at,
-                    isFavorite: true, // 즐겨찾기 목록이므로 모두 true
-                }));
+                transformedFiles = favoritesData.map(file => {
+                    const fileType = (file.content_type || file.contentType || file.file_type || '').startsWith('image/') ? 'image' : 'video';
+                    const isVideoProcessing = fileType === 'video' && !(file.thumbnail_url || file.thumbnailUrl);
+                    const thumbnailUrl = file.thumbnail_url || file.thumbnailUrl ||
+                        (fileType === 'video'
+                            ? `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`
+                            : file.download_url || file.downloadUrl || `https://via.placeholder.com/300?text=${file.file_name || file.fileName}`);
+
+                    return {
+                        id: file.id,
+                        name: file.file_name || file.fileName,
+                        url: thumbnailUrl,
+                        originalUrl: file.download_url || file.downloadUrl,
+                        type: fileType,
+                        date: format(parseISO(file.created_at || file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd'),
+                        tags: file.tags ? file.tags.map(t => t.name || t) : [],
+                        duration: file.duration || null,
+                        size: file.file_size || file.fileSize,
+                        created_at: file.created_at || file.uploadedAt || file.uploaded_at,
+                        isFavorite: true, // 즐겨찾기 목록이므로 모두 true
+                        processing_status: file.processing_status || (isVideoProcessing ? 'processing' : 'completed'),
+                        processing_progress: file.processing_progress || 0,
+                        processing_stage: file.processing_stage || null,
+                        processing_error: file.processing_error || null,
+                    };
+                });
             } else {
                 // 일반 파일 목록 조회
                 const params = {
@@ -522,19 +535,32 @@ const Gallery = () => {
                 const result = await fileApi.getFiles(params);
 
                 // Transform API response to match frontend structure
-                transformedFiles = result.files.map(file => ({
-                    id: file.id,
-                    name: file.file_name,
-                    url: file.thumbnail_url || file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`,
-                    originalUrl: file.download_url || file.url,
-                    type: file.file_type,
-                    date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
-                    tags: file.tags ? file.tags.map(t => t.name) : [],
-                    duration: file.duration || null,
-                    size: file.file_size,
-                    created_at: file.created_at,
-                    isFavorite: favoriteFileIds.has(file.id) || file.is_favorite || false,
-                }));
+                transformedFiles = result.files.map(file => {
+                    // 동영상이면서 썸네일이 없는 경우 처리 중인 것으로 간주
+                    const isVideoProcessing = file.file_type === 'video' && !file.thumbnail_url;
+                    const thumbnailUrl = file.thumbnail_url ||
+                        (file.file_type === 'video'
+                            ? `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`
+                            : file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`);
+
+                    return {
+                        id: file.id,
+                        name: file.file_name,
+                        url: thumbnailUrl,
+                        originalUrl: file.download_url || file.url,
+                        type: file.file_type,
+                        date: format(parseISO(file.created_at), 'yyyy-MM-dd'),
+                        tags: file.tags ? file.tags.map(t => t.name) : [],
+                        duration: file.duration || null,
+                        size: file.file_size,
+                        created_at: file.created_at,
+                        isFavorite: favoriteFileIds.has(file.id) || file.is_favorite || false,
+                        processing_status: file.processing_status || (isVideoProcessing ? 'processing' : 'completed'),
+                        processing_progress: file.processing_progress || 0,
+                        processing_stage: file.processing_stage || null,
+                        processing_error: file.processing_error || null,
+                    };
+                });
             }
 
             setFiles(transformedFiles);
