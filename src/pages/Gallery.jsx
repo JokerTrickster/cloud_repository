@@ -92,19 +92,18 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 
     // Handle hover for video preview and image preload
     const handleMouseEnter = () => {
-        if (file.type === 'video' && !isSelectionMode) {
+        if (!isSelectionMode) {
             setIsHovered(true);
-        } else if (file.type === 'image' && file.originalUrl && !isSelectionMode) {
-            // Preload original image on hover
-            const img = new Image();
-            img.src = file.originalUrl;
+            if (file.type === 'image' && file.originalUrl) {
+                // Preload original image on hover
+                const img = new Image();
+                img.src = file.originalUrl;
+            }
         }
     };
 
     const handleMouseLeave = () => {
-        if (file.type === 'video') {
-            setIsHovered(false);
-        }
+        setIsHovered(false);
     };
 
     return (
