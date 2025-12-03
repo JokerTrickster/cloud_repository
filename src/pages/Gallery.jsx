@@ -508,23 +508,36 @@ const Gallery = () => {
 
                 transformedFiles = favoritesData.map(file => {
                     const fileType = (file.content_type || file.contentType || file.file_type || '').startsWith('image/') ? 'image' : 'video';
-                    const isVideoProcessing = fileType === 'video' && !(file.thumbnail_url || file.thumbnailUrl);
+                    const thumbUrl = file.thumbnail_url || file.thumbnailUrl;
+                    const isVideoProcessing = fileType === 'video' &&
+                        (!thumbUrl || file.processing_status === 'pending' || file.processing_status === 'processing');
 
                     // 디버깅: 동영상 파일 정보 로깅
                     if (fileType === 'video') {
                         console.log('[Gallery Favorites] Video file:', {
                             name: file.file_name || file.fileName,
-                            thumbnail_url: file.thumbnail_url || file.thumbnailUrl,
+                            thumbnail_url: thumbUrl,
                             download_url: file.download_url || file.downloadUrl,
                             processing_status: file.processing_status,
                             isVideoProcessing
                         });
                     }
 
-                    const thumbnailUrl = file.thumbnail_url || file.thumbnailUrl ||
-                        (fileType === 'video'
-                            ? `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`
-                            : file.download_url || file.downloadUrl || `https://via.placeholder.com/300?text=${file.file_name || file.fileName}`);
+                    // 썸네일 URL 결정
+                    let thumbnailUrl;
+                    if (fileType === 'video') {
+                        // 동영상: 썸네일이 있고 처리 완료된 경우만 썸네일 사용
+                        if (thumbUrl && file.processing_status === 'completed') {
+                            thumbnailUrl = thumbUrl;
+                        } else {
+                            // 처리 중이거나 썸네일 없으면 placeholder
+                            thumbnailUrl = `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`;
+                        }
+                    } else {
+                        // 이미지: thumbnail_url > download_url > placeholder
+                        thumbnailUrl = thumbUrl || file.download_url || file.downloadUrl ||
+                            `https://via.placeholder.com/300?text=${file.file_name || file.fileName}`;
+                    }
 
                     return {
                         id: file.id,
@@ -559,8 +572,9 @@ const Gallery = () => {
 
                 // Transform API response to match frontend structure
                 transformedFiles = result.files.map(file => {
-                    // 동영상이면서 썸네일이 없는 경우 처리 중인 것으로 간주
-                    const isVideoProcessing = file.file_type === 'video' && !file.thumbnail_url;
+                    // 동영상 처리 상태 확인
+                    const isVideoProcessing = file.file_type === 'video' &&
+                        (!file.thumbnail_url || file.processing_status === 'pending' || file.processing_status === 'processing');
 
                     // 디버깅: 동영상 파일 정보 로깅
                     if (file.file_type === 'video') {
@@ -568,15 +582,27 @@ const Gallery = () => {
                             name: file.file_name,
                             thumbnail_url: file.thumbnail_url,
                             download_url: file.download_url,
+                            url: file.url,
                             processing_status: file.processing_status,
                             isVideoProcessing
                         });
                     }
 
-                    const thumbnailUrl = file.thumbnail_url ||
-                        (file.file_type === 'video'
-                            ? `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`
-                            : file.download_url || file.url || `https://via.placeholder.com/300?text=${file.file_name}`);
+                    // 썸네일 URL 결정
+                    let thumbnailUrl;
+                    if (file.file_type === 'video') {
+                        // 동영상: 썸네일이 있고 처리 완료된 경우만 썸네일 사용
+                        if (file.thumbnail_url && file.processing_status === 'completed') {
+                            thumbnailUrl = file.thumbnail_url;
+                        } else {
+                            // 처리 중이거나 썸네일 없으면 placeholder
+                            thumbnailUrl = `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`;
+                        }
+                    } else {
+                        // 이미지: thumbnail_url > download_url > url > placeholder
+                        thumbnailUrl = file.thumbnail_url || file.download_url || file.url ||
+                            `https://via.placeholder.com/300?text=${file.file_name}`;
+                    }
 
                     return {
                         id: file.id,
