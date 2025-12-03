@@ -526,6 +526,55 @@ export const fileValidation = {
     );
     return data;
   },
+
+  /**
+   * 파일 태그 일괄 업데이트 (기존 태그 교체)
+   * PUT /api/v1/files/:id/tags
+   *
+   * @param {number} fileId - 파일 ID
+   * @param {string[]} tags - 새로운 태그 배열
+   * @returns {Promise<{file_id: number, tags: string[], updated_at: string}>}
+   */
+  async updateFileTags(fileId, tags) {
+    const { data } = await client.put(
+      `/api/v1/files/${fileId}/tags`,
+      { tags },
+      { baseURL: import.meta.env.VITE_FILE_API_URL }
+    );
+    return data;
+  },
+
+  /**
+   * 파일에 태그 추가
+   * POST /api/v1/files/:id/tags
+   *
+   * @param {number} fileId - 파일 ID
+   * @param {string} tag - 추가할 태그
+   * @returns {Promise<{file_id: number, tag: string, updated_at: string}>}
+   */
+  async addFileTag(fileId, tag) {
+    const { data } = await client.post(
+      `/api/v1/files/${fileId}/tags`,
+      { tag },
+      { baseURL: import.meta.env.VITE_FILE_API_URL }
+    );
+    return data;
+  },
+
+  /**
+   * 파일에서 태그 삭제
+   * DELETE /api/v1/files/:id/tags/:tag
+   *
+   * @param {number} fileId - 파일 ID
+   * @param {string} tag - 삭제할 태그
+   * @returns {Promise<void>}
+   */
+  async removeFileTag(fileId, tag) {
+    await client.delete(
+      `/api/v1/files/${fileId}/tags/${encodeURIComponent(tag)}`,
+      { baseURL: import.meta.env.VITE_FILE_API_URL }
+    );
+  }
 };
 
 export default fileApi;

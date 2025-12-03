@@ -1,19 +1,21 @@
 import React, { useState, useMemo, useEffect, memo, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download, Star, AlertCircle } from 'lucide-react';
+import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download, Star, AlertCircle, Edit2 } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
 import ProcessingIndicator from '../components/ProcessingIndicator';
+import TagEditor from '../components/TagEditor';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 import { formatDuration } from '../utils/thumbnail';
 
 // Memoized Gallery Item Component with Lazy Loading
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onToggleFavorite }) => {
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onToggleFavorite, onTagUpdate }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+    const [isEditingTags, setIsEditingTags] = useState(false);
     const imgRef = useRef(null);
     const videoRef = useRef(null);
 
@@ -240,7 +242,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
             )}
 
             {/* Tag Overlay - Hide on hover for cleaner view */}
-            {!isHovered && (
+            {!isHovered && !isEditingTags && (
                 <div style={{
                     position: 'absolute',
                     bottom: 0,
@@ -251,22 +253,69 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     display: 'flex',
                     gap: '3px',
                     flexWrap: 'wrap',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end'
                 }}>
-                    {file.tags.map(tag => (
-                        <span key={tag} style={{
-                            fontSize: '9px',
-                            color: 'white',
-                            background: searchTerm === `#${tag}` ? 'var(--primary)' : 'rgba(0,0,0,0.6)',
-                            padding: '2px 5px',
-                            borderRadius: '3px',
-                            backdropFilter: 'blur(2px)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            fontWeight: '500'
-                        }}>
-                            #{tag}
-                        </span>
-                    ))}
+                    <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', flex: 1 }}>
+                        {file.tags.map(tag => (
+                            <span key={tag} style={{
+                                fontSize: '9px',
+                                color: 'white',
+                                background: searchTerm === `#${tag}` ? 'var(--primary)' : 'rgba(0,0,0,0.6)',
+                                padding: '2px 5px',
+                                borderRadius: '3px',
+                                backdropFilter: 'blur(2px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                fontWeight: '500'
+                            }}>
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                    {!isSelectionMode && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditingTags(true);
+                            }}
+                            style={{
+                                background: 'rgba(0,0,0,0.6)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '3px',
+                                padding: '2px 4px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                backdropFilter: 'blur(2px)'
+                            }}
+                            title="태그 편집"
+                        >
+                            <Edit2 size={10} color="white" />
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Tag Editor */}
+            {isEditingTags && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    right: '8px',
+                    zIndex: 100
+                }}>
+                    <TagEditor
+                        fileId={file.id}
+                        tags={file.tags}
+                        compact={true}
+                        onUpdate={(newTags) => {
+                            if (onTagUpdate) {
+                                onTagUpdate(file.id, newTags);
+                            }
+                        }}
+                        onClose={() => setIsEditingTags(false)}
+                    />
                 </div>
             )}
 
@@ -971,6 +1020,16 @@ const Gallery = () => {
         }
     };
 
+    // Handle tag update from TagEditor
+    const handleTagUpdate = (fileId, newTags) => {
+        console.log('[Tags] Updating tags:', { fileId, newTags });
+        setFiles(prevFiles =>
+            prevFiles.map(f =>
+                f.id === fileId ? { ...f, tags: newTags } : f
+            )
+        );
+    };
+
     const handleImageLoad = () => {
         loadedImagesCount.current += 1;
 
@@ -1476,6 +1535,7 @@ const Gallery = () => {
                                             onLoad={handleImageLoad}
                                             index={absoluteIndex}
                                             onToggleFavorite={handleToggleFavorite}
+                                            onTagUpdate={handleTagUpdate}
                                         />
                                     );
                                 })}
