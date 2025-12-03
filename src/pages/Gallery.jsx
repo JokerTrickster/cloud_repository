@@ -291,8 +291,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 </div>
             )}
 
-            {/* More Options Menu Button - Visible on Hover */}
-            {!isSelectionMode && (isHovered || showMenu) && (
+            {/* More Options Menu Button - Always Visible for Mobile Accessibility */}
+            {!isSelectionMode && (
                 <div style={{
                     position: 'absolute',
                     top: '8px',
