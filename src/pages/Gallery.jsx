@@ -363,7 +363,38 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                             >
                                 <Edit2 size={14} /> 태그 편집
                             </button>
-                            {/* Add other menu items here if needed later */}
+
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowMenu(false);
+                                    if (!isTogglingFavorite && onToggleFavorite) {
+                                        setIsTogglingFavorite(true);
+                                        onToggleFavorite(file.id, file.isFavorite);
+                                    }
+                                }}
+                                disabled={isTogglingFavorite}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: 'none',
+                                    background: 'none',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    color: file.isFavorite ? '#FFD700' : 'var(--text-primary)',
+                                    cursor: isTogglingFavorite ? 'wait' : 'pointer',
+                                    borderRadius: '4px',
+                                    opacity: isTogglingFavorite ? 0.5 : 1
+                                }}
+                                onMouseOver={e => e.currentTarget.style.background = '#f5f5f5'}
+                                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                            >
+                                <Star size={14} fill={file.isFavorite ? '#FFD700' : 'none'} />
+                                {file.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                            </button>
                         </div>
                     )}
                 </div>
@@ -388,59 +419,11 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                                 onTagUpdate(file.id, newTags);
                             }
                         }}
-                        onClose={() => setIsEditingTags(false)}
                     />
                 </div>
             )} */}
 
-            {/* Favorite Button */}
-            {!isSelectionMode && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isTogglingFavorite && onToggleFavorite) {
-                            setIsTogglingFavorite(true);
-                            onToggleFavorite(file.id, file.isFavorite);
-                        }
-                    }}
-                    disabled={isTogglingFavorite}
-                    aria-pressed={file.isFavorite}
-                    aria-label={file.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                    style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        background: 'rgba(0,0,0,0.5)',
-                        backdropFilter: 'blur(4px)',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: isTogglingFavorite ? 'wait' : 'pointer',
-                        transition: 'all 0.2s',
-                        zIndex: 20,
-                        opacity: isTogglingFavorite ? 0.5 : 1
-                    }}
-                    onMouseEnter={(e) => {
-                        if (!isTogglingFavorite) {
-                            e.currentTarget.style.transform = 'scale(1.15)';
-                        }
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                >
-                    <Star
-                        size={12}
-                        fill={file.isFavorite ? '#FBBC04' : 'none'}
-                        color={file.isFavorite ? '#FBBC04' : 'white'}
-                        strokeWidth={2.5}
-                    />
-                </button>
-            )}
+            {/* Favorite Button Removed - Moved to Menu */}
 
             {/* Selection Indicator */}
             {isSelectionMode && (
