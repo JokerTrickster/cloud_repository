@@ -17,6 +17,17 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
     const imgRef = useRef(null);
     const videoRef = useRef(null);
 
+    // 디버깅: 동영상 파일 렌더링 정보
+    if (file.type === 'video') {
+        console.log('[GalleryItem] Rendering video:', {
+            name: file.name,
+            url: file.url,
+            originalUrl: file.originalUrl,
+            processing_status: file.processing_status,
+            isPlaceholder: file.url?.includes('placeholder')
+        });
+    }
+
     // Reset toggling state when favorite status changes
     useEffect(() => {
         if (isTogglingFavorite) {
@@ -498,6 +509,18 @@ const Gallery = () => {
                 transformedFiles = favoritesData.map(file => {
                     const fileType = (file.content_type || file.contentType || file.file_type || '').startsWith('image/') ? 'image' : 'video';
                     const isVideoProcessing = fileType === 'video' && !(file.thumbnail_url || file.thumbnailUrl);
+
+                    // 디버깅: 동영상 파일 정보 로깅
+                    if (fileType === 'video') {
+                        console.log('[Gallery Favorites] Video file:', {
+                            name: file.file_name || file.fileName,
+                            thumbnail_url: file.thumbnail_url || file.thumbnailUrl,
+                            download_url: file.download_url || file.downloadUrl,
+                            processing_status: file.processing_status,
+                            isVideoProcessing
+                        });
+                    }
+
                     const thumbnailUrl = file.thumbnail_url || file.thumbnailUrl ||
                         (fileType === 'video'
                             ? `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`
@@ -538,6 +561,18 @@ const Gallery = () => {
                 transformedFiles = result.files.map(file => {
                     // 동영상이면서 썸네일이 없는 경우 처리 중인 것으로 간주
                     const isVideoProcessing = file.file_type === 'video' && !file.thumbnail_url;
+
+                    // 디버깅: 동영상 파일 정보 로깅
+                    if (file.file_type === 'video') {
+                        console.log('[Gallery] Video file:', {
+                            name: file.file_name,
+                            thumbnail_url: file.thumbnail_url,
+                            download_url: file.download_url,
+                            processing_status: file.processing_status,
+                            isVideoProcessing
+                        });
+                    }
+
                     const thumbnailUrl = file.thumbnail_url ||
                         (file.file_type === 'video'
                             ? `https://via.placeholder.com/300/4A5568/FFFFFF?text=${encodeURIComponent('처리 중...')}`
