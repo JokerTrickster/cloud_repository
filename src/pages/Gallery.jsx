@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, memo, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download, Star, AlertCircle, Edit2 } from 'lucide-react';
+import { Search, Grid, Check, X, Play, Trash2, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload as UploadIcon, Share2, Download, Star, AlertCircle, Edit2, MoreVertical } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import fileApi from '../api/fileApi';
 import FileUpload from '../components/FileUpload';
 import ProcessingIndicator from '../components/ProcessingIndicator';
 import TagEditor from '../components/TagEditor';
+import TagEditModal from '../components/TagEditModal';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 import { formatDuration } from '../utils/thumbnail';
 
@@ -15,7 +16,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
     const [isLoaded, setIsLoaded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
-    const [isEditingTags, setIsEditingTags] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef(null);
     const imgRef = useRef(null);
     const videoRef = useRef(null);
 
@@ -36,6 +38,21 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
             setIsTogglingFavorite(false);
         }
     }, [file.isFavorite]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowMenu(false);
+            }
+        };
+
+        if (showMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showMenu]);
 
     useEffect(() => {
         // Intersection Observer for lazy loading with preload margin
@@ -228,21 +245,21 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 
             {/* Processing Indicator - 처리 중/실패 상태 표시 */}
             {(file.processing_status === 'processing' ||
-              file.processing_status === 'pending' ||
-              file.processing_status === 'failed') && (
-                <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    maxWidth: 'calc(100% - 16px)',
-                    zIndex: 3
-                }}>
-                    <ProcessingIndicator file={file} compact={true} />
-                </div>
-            )}
+                file.processing_status === 'pending' ||
+                file.processing_status === 'failed') && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        maxWidth: 'calc(100% - 16px)',
+                        zIndex: 3
+                    }}>
+                        <ProcessingIndicator file={file} compact={true} />
+                    </div>
+                )}
 
             {/* Tag Overlay - Hide on hover for cleaner view */}
-            {!isHovered && !isEditingTags && (
+            {!isHovered && (
                 <div style={{
                     position: 'absolute',
                     bottom: 0,
@@ -253,7 +270,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     display: 'flex',
                     gap: '3px',
                     flexWrap: 'wrap',
-                    justifyContent: 'space-between',
+                    justifyContent: 'flex-start',
                     alignItems: 'flex-end'
                 }}>
                     <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', flex: 1 }}>
@@ -272,32 +289,90 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                             </span>
                         ))}
                     </div>
-                    {!isSelectionMode && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsEditingTags(true);
-                            }}
+                </div>
+            )}
+
+            {/* More Options Menu Button - Visible on Hover */}
+            {!isSelectionMode && (isHovered || showMenu) && (
+                <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    zIndex: 20
+                }} onClick={e => e.stopPropagation()}>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMenu(!showMenu);
+                        }}
+                        style={{
+                            background: 'rgba(0,0,0,0.6)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '50%',
+                            width: '28px',
+                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            backdropFilter: 'blur(4px)',
+                            color: 'white'
+                        }}
+                    >
+                        <MoreVertical size={16} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {showMenu && (
+                        <div
+                            ref={menuRef}
                             style={{
-                                background: 'rgba(0,0,0,0.6)',
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                borderRadius: '3px',
-                                padding: '2px 4px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                backdropFilter: 'blur(2px)'
+                                position: 'absolute',
+                                top: '100%',
+                                right: 0,
+                                marginTop: '4px',
+                                background: 'white',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                padding: '4px',
+                                minWidth: '120px',
+                                zIndex: 30,
+                                overflow: 'hidden'
                             }}
-                            title="태그 편집"
                         >
-                            <Edit2 size={10} color="white" />
-                        </button>
+                            <button
+                                onClick={() => {
+                                    setShowMenu(false);
+                                    onTagUpdate(file); // Open modal via parent
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: 'none',
+                                    background: 'none',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    color: 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    borderRadius: '4px'
+                                }}
+                                onMouseOver={e => e.currentTarget.style.background = '#f5f5f5'}
+                                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                            >
+                                <Edit2 size={14} /> 태그 편집
+                            </button>
+                            {/* Add other menu items here if needed later */}
+                        </div>
                     )}
                 </div>
             )}
 
             {/* Tag Editor */}
-            {isEditingTags && (
+            {/* This local TagEditor is replaced by a modal in the parent Gallery component */}
+            {/* {isEditingTags && (
                 <div style={{
                     position: 'absolute',
                     bottom: '8px',
@@ -317,7 +392,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         onClose={() => setIsEditingTags(false)}
                     />
                 </div>
-            )}
+            )} */}
 
             {/* Favorite Button */}
             {!isSelectionMode && (
@@ -417,6 +492,7 @@ const Gallery = () => {
     const [showUpload, setShowUpload] = useState(false);
     const [error, setError] = useState('');
     const [uploadState, setUploadState] = useState(null); // Background upload state
+    const [editingFile, setEditingFile] = useState(null);
 
     // Performance Measurement Refs
     const loadStartTime = useRef(0);
@@ -1030,6 +1106,10 @@ const Gallery = () => {
         );
     };
 
+    const openTagEditor = (file) => {
+        setEditingFile(file);
+    };
+
     const handleImageLoad = () => {
         loadedImagesCount.current += 1;
 
@@ -1535,7 +1615,7 @@ const Gallery = () => {
                                             onLoad={handleImageLoad}
                                             index={absoluteIndex}
                                             onToggleFavorite={handleToggleFavorite}
-                                            onTagUpdate={handleTagUpdate}
+                                            onTagUpdate={openTagEditor}
                                         />
                                     );
                                 })}
@@ -2136,6 +2216,14 @@ const Gallery = () => {
                         )}
                     </div>
                 </div>
+            )}
+            {/* Tag Edit Modal */}
+            {editingFile && (
+                <TagEditModal
+                    file={editingFile}
+                    onClose={() => setEditingFile(null)}
+                    onUpdate={handleTagUpdate}
+                />
             )}
         </div>
     );
