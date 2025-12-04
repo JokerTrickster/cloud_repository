@@ -31,13 +31,6 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
         });
     }
 
-    // Reset toggling state when favorite status changes
-    useEffect(() => {
-        if (isTogglingFavorite) {
-            setIsTogglingFavorite(false);
-        }
-    }, [file.isFavorite]);
-
     useEffect(() => {
         // Intersection Observer for lazy loading with preload margin
         const observer = new IntersectionObserver(
