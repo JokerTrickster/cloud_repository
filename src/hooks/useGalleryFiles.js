@@ -14,7 +14,7 @@ export const useGalleryFiles = () => {
     const totalImagesToLoad = useRef(0);
     const apiEndTime = useRef(0);
 
-    const loadFiles = async ({ dateRange, filterType, sortOption, favoriteOnly }) => {
+    const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly } = {}) => {
         setLoading(true);
         setError('');
 
@@ -61,8 +61,8 @@ export const useGalleryFiles = () => {
                 const params = {
                     file_type: filterType === 'all' ? undefined : filterType,
                     sort: sortOption,
-                    start_date: dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
-                    end_date: dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
+                    start_date: dateRange?.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
+                    end_date: dateRange?.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
                     page: 1,
                     page_size: 100,
                 };
