@@ -120,7 +120,9 @@ export const WebSocketProvider = ({ children }) => {
       console.log('[WebSocket] Cleaning up connection');
       newSocket.close();
     };
-  }, []);
+  // BUG FIX #2: WebSocket Memory Leak
+  // Add token to dependency array to ensure cleanup on token change
+  }, [token]); // token was missing from dependency array
 
   const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));

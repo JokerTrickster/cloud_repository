@@ -55,22 +55,32 @@ const fileApi = {
    * @returns {Promise<void>}
    */
   async uploadToS3(uploadUrl, file, onProgress) {
-    await axios.put(uploadUrl, file, {
-      headers: {
-        'Content-Type': file.type,
-      },
-      timeout: 0, // 타임아웃 없음 (대용량 동영상 업로드 지원)
-      maxContentLength: Infinity, // 최대 컨텐츠 크기 제한 없음
-      maxBodyLength: Infinity, // 최대 바디 크기 제한 없음
-      onUploadProgress: (progressEvent) => {
-        if (onProgress) {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          onProgress(percentCompleted);
-        }
-      },
-    });
+    // BUG FIX #4: Infinite Timeout in S3 Upload
+    // Set 10-minute timeout with AbortController for graceful cancellation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes
+
+    try {
+      await axios.put(uploadUrl, file, {
+        headers: {
+          'Content-Type': file.type,
+        },
+        timeout: 600000, // 10 minutes timeout (changed from 0 to prevent infinite wait)
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        signal: controller.signal, // Allow manual cancellation
+        onUploadProgress: (progressEvent) => {
+          if (onProgress) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            onProgress(percentCompleted);
+          }
+        },
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   },
 
   /**
@@ -156,6 +166,10 @@ const fileApi = {
         }
       );
 
+      // BUG FIX #3: Upload Notification Silent Failure
+      // Set processing_status flag on failure to track incomplete uploads
+      let processingStatus = file.type.startsWith('video/') ? 'processing' : 'completed';
+
       // 업로드 완료 통지 (백엔드에서 백그라운드 처리 시작)
       try {
         console.log(`📡 Notifying upload completion for file ${result.file_id}...`);
@@ -164,8 +178,9 @@ const fileApi = {
         });
         console.log(`✅ Upload completion notified for file ${result.file_id}`);
       } catch (err) {
-        console.warn(`⚠️ Failed to notify upload completion for ${file.name}:`, err);
-        // 통지 실패는 경고만 하고 계속 진행
+        // Mark as failed if notification fails (backend may not process the file)
+        console.error(`❌ Failed to notify upload completion for ${file.name}:`, err);
+        processingStatus = 'failed'; // Set status to failed to indicate incomplete upload
       }
 
       // 최종 진행률 100%
@@ -177,8 +192,8 @@ const fileApi = {
         file_id: result.file_id,
         s3_key: result.s3_key,
         file_name: file.name,
-        // 비디오는 백그라운드 처리 중
-        processing_status: file.type.startsWith('video/') ? 'processing' : 'completed'
+        // Use updated processing status (reflects notification failure)
+        processing_status: processingStatus
       };
     });
 

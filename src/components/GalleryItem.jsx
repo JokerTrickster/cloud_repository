@@ -1,0 +1,324 @@
+import React, { useState, useEffect, memo, useRef } from 'react';
+import { Play, Check, MoreVertical } from 'lucide-react';
+import ProcessingIndicator from './ProcessingIndicator';
+import { formatDuration } from '../utils/thumbnail';
+
+/**
+ * Memoized Gallery Item Component with Lazy Loading
+ * 개별 파일 카드 컴포넌트 (이미지/비디오)
+ */
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onOpenOptions }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const imgRef = useRef(null);
+    const videoRef = useRef(null);
+
+    // 디버깅: 동영상 파일 렌더링 정보
+    if (file.type === 'video') {
+        console.log('[GalleryItem] Rendering video:', {
+            name: file.name,
+            url: file.url,
+            originalUrl: file.originalUrl,
+            processing_status: file.processing_status,
+            isPlaceholder: file.url?.includes('placeholder')
+        });
+    }
+
+    useEffect(() => {
+        // Intersection Observer for lazy loading with preload margin
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && imgRef.current) {
+                        // Start loading the image
+                        const img = imgRef.current;
+                        if (!img.src || img.src.includes('data:image')) {
+                            img.src = file.url;
+                        }
+                    }
+                });
+            },
+            {
+                rootMargin: '50px', // Load images 50px before they enter viewport
+                threshold: 0.01
+            }
+        );
+
+        if (imgRef.current) {
+            observer.observe(imgRef.current);
+        }
+
+        return () => {
+            if (imgRef.current) {
+                observer.unobserve(imgRef.current);
+            }
+        };
+    }, [file.url]);
+
+    const handleLoad = () => {
+        setIsLoaded(true);
+        if (onLoad) onLoad();
+    };
+
+    // Handle hover for video preview and image preload
+    const handleMouseEnter = () => {
+        if (!isSelectionMode) {
+            setIsHovered(true);
+            if (file.type === 'image' && file.originalUrl) {
+                // Preload original image on hover
+                const img = new Image();
+                img.src = file.originalUrl;
+            }
+        }
+    };
+
+    const handleMouseLeave = () => {
+        setIsHovered(false);
+    };
+
+    return (
+        <div
+            onClick={(e) => {
+                if (isSelectionMode) {
+                    onToggle(file.id);
+                } else if (file.type === 'video') {
+                    e.stopPropagation();
+                    // Reset hover state before opening modal
+                    setIsHovered(false);
+                    // Open video player
+                    if (window.openVideoPlayer) {
+                        window.openVideoPlayer(file);
+                    }
+                } else if (file.type === 'image') {
+                    e.stopPropagation();
+                    // Reset hover state before opening modal
+                    setIsHovered(false);
+                    // Open image viewer
+                    if (window.openImageViewer) {
+                        window.openImageViewer(file);
+                    }
+                }
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                position: 'relative',
+                paddingBottom: '100%',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                background: '#eee',
+                cursor: 'pointer',
+                border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none',
+                transform: isHovered && !isSelectionMode ? 'scale(1.05)' : 'scale(1)',
+                transition: 'transform 0.2s ease-in-out',
+                zIndex: isHovered ? 10 : 1
+            }}
+        >
+            {/* Loading Placeholder */}
+            {!isLoaded && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 1.5s infinite'
+                }} />
+            )}
+
+            <img
+                ref={imgRef}
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" // 1px transparent placeholder
+                alt={file.name}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'opacity 0.3s ease-in-out',
+                    opacity: isLoaded ? (isSelectionMode && isSelected ? 0.7 : 1) : 0
+                }}
+                loading="lazy"
+                decoding="async"
+                fetchPriority={index < 6 ? 'high' : 'low'}
+                onLoad={handleLoad}
+                onError={(e) => {
+                    // Fallback to original URL on error
+                    if (!e.target.src.includes(file.url)) {
+                        e.target.src = file.url;
+                    }
+                }}
+            />
+
+            {/* Video Preview Overlay */}
+            {isHovered && file.type === 'video' && (
+                <video
+                    ref={videoRef}
+                    src={file.url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 2
+                    }}
+                />
+            )}
+
+            {/* Video Indicator & Duration */}
+            {file.type === 'video' && !isHovered && (
+                <>
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(4px)'
+                    }}>
+                        <Play size={14} fill="white" color="white" style={{ marginLeft: '1px' }} />
+                    </div>
+                    {file.duration && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            left: '8px',
+                            background: 'rgba(0,0,0,0.7)',
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '500'
+                        }}>
+                            {formatDuration(file.duration)}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Processing Indicator - 처리 중/실패 상태 표시 */}
+            {(file.processing_status === 'processing' ||
+                file.processing_status === 'pending' ||
+                file.processing_status === 'failed') && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        maxWidth: 'calc(100% - 16px)',
+                        zIndex: 3
+                    }}>
+                        <ProcessingIndicator file={file} compact={true} />
+                    </div>
+                )}
+
+            {/* Tag Overlay - Hide on hover for cleaner view */}
+            {!isHovered && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    padding: '4px',
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                    display: 'flex',
+                    gap: '3px',
+                    flexWrap: 'wrap',
+                    justifyContent: 'flex-start',
+                    alignItems: 'flex-end'
+                }}>
+                    <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', flex: 1 }}>
+                        {file.tags.map(tag => (
+                            <span key={tag} style={{
+                                fontSize: '9px',
+                                color: 'white',
+                                background: searchTerm === `#${tag}` ? 'var(--primary)' : 'rgba(0,0,0,0.6)',
+                                padding: '2px 5px',
+                                borderRadius: '3px',
+                                backdropFilter: 'blur(2px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                fontWeight: '500'
+                            }}>
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* More Options Menu Button - Always Visible for Mobile Accessibility */}
+            {!isSelectionMode && (
+                <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    zIndex: 20
+                }} onClick={e => e.stopPropagation()}>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenOptions) {
+                                onOpenOptions(file);
+                            }
+                        }}
+                        style={{
+                            background: 'rgba(0,0,0,0.6)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            backdropFilter: 'blur(4px)',
+                            color: 'white'
+                        }}
+                    >
+                        <MoreVertical size={16} />
+                    </button>
+                </div>
+            )}
+
+            {/* Selection Indicator */}
+            {isSelectionMode && (
+                <div style={{
+                    position: 'absolute',
+                    top: '6px',
+                    right: '6px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.8)',
+                    border: '1.5px solid white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    zIndex: 20
+                }}>
+                    {isSelected && <Check size={12} color="white" />}
+                </div>
+            )}
+        </div>
+    );
+});
+
+GalleryItem.displayName = 'GalleryItem';
+
+export default GalleryItem;

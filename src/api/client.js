@@ -46,20 +46,35 @@ client.interceptors.response.use(
                     return Promise.reject(new Error('No refresh token available'));
                 }
 
-                // Try to refresh the token
-                // In production, this would be an actual API call
-                // const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+                // BUG FIX #5: Token Refresh Mock Code
+                // Check environment to determine if using mock or production API
+                let newAccessToken, newRefreshToken;
 
-                // For development: simulate token refresh
-                // You can set this to fail to test the redirect behavior
-                const shouldSimulateRefreshSuccess = Math.random() > 0.3; // 70% success rate
+                if (import.meta.env.DEV || import.meta.env.VITE_USE_MOCK_AUTH === 'true') {
+                    // Development: Use mock token refresh
+                    console.log('[Auth] Using mock token refresh (development mode)');
+                    const shouldSimulateRefreshSuccess = Math.random() > 0.3; // 70% success rate
 
-                if (!shouldSimulateRefreshSuccess) {
-                    throw new Error('Refresh token expired');
+                    if (!shouldSimulateRefreshSuccess) {
+                        throw new Error('Refresh token expired (mock)');
+                    }
+
+                    newAccessToken = `new_mock_access_token_${Date.now()}`;
+                    newRefreshToken = `new_mock_refresh_token_${Date.now()}`;
+                } else {
+                    // Production: Call actual refresh endpoint
+                    console.log('[Auth] Calling production token refresh API');
+                    const { data } = await axios.post(
+                        `${import.meta.env.VITE_AUTH_API_URL}/api/auth/refresh`,
+                        { refreshToken },
+                        {
+                            headers: { 'Content-Type': 'application/json' }
+                        }
+                    );
+
+                    newAccessToken = data.accessToken;
+                    newRefreshToken = data.refreshToken;
                 }
-
-                const newAccessToken = `new_mock_access_token_${Date.now()}`;
-                const newRefreshToken = `new_mock_refresh_token_${Date.now()}`;
 
                 setTokens(newAccessToken, newRefreshToken);
 
@@ -69,7 +84,7 @@ client.interceptors.response.use(
 
             } catch (refreshError) {
                 // Refresh failed - clear tokens and redirect to login
-                console.log('Token refresh failed:', refreshError.message);
+                console.error('[Auth] Token refresh failed:', refreshError.message);
                 clearTokens();
 
                 // Save the current path to redirect back after login
