@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { Play, Check, MoreVertical } from 'lucide-react';
+import { Play, Check, MoreVertical, Star } from 'lucide-react';
 import ProcessingIndicator from './ProcessingIndicator';
 import { formatDuration } from '../utils/thumbnail';
 
@@ -7,7 +7,7 @@ import { formatDuration } from '../utils/thumbnail';
  * Memoized Gallery Item Component with Lazy Loading
  * 개별 파일 카드 컴포넌트 (이미지/비디오)
  */
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onOpenOptions }) => {
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onOpenOptions, onToggleFavorite }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const imgRef = useRef(null);
@@ -197,14 +197,15 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     {file.duration && (
                         <div style={{
                             position: 'absolute',
-                            top: '8px',
-                            left: '8px',
+                            bottom: '8px',
+                            right: '8px',
                             background: 'rgba(0,0,0,0.7)',
                             color: 'white',
                             padding: '2px 6px',
                             borderRadius: '4px',
                             fontSize: '10px',
-                            fontWeight: '500'
+                            fontWeight: '500',
+                            zIndex: 2
                         }}>
                             {formatDuration(file.duration)}
                         </div>
@@ -280,8 +281,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                             background: 'rgba(0,0,0,0.6)',
                             border: '1px solid rgba(255,255,255,0.2)',
                             borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
+                            width: '20px',
+                            height: '20px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -290,7 +291,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                             color: 'white'
                         }}
                     >
-                        <MoreVertical size={16} />
+                        <MoreVertical size={12} />
                     </button>
                 </div>
             )}
@@ -313,6 +314,40 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     zIndex: 20
                 }}>
                     {isSelected && <Check size={12} color="white" />}
+                </div>
+            )}
+
+            {/* Favorite Icon */}
+            {!isSelectionMode && (
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onToggleFavorite) {
+                            onToggleFavorite(file.id, file.isFavorite);
+                        }
+                    }}
+                    style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        zIndex: 20,
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        background: file.isFavorite ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0,0,0,0.3)',
+                        backdropFilter: 'blur(2px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    <Star
+                        size={14}
+                        fill={file.isFavorite ? "#FFD700" : "none"}
+                        color={file.isFavorite ? "#FFD700" : "white"}
+                        strokeWidth={file.isFavorite ? 0 : 2}
+                    />
                 </div>
             )}
         </div>

@@ -15,7 +15,8 @@ const GalleryGrid = ({
     onToggleSelection,
     onImageLoad,
     onOpenOptions,
-    onShowUpload
+    onShowUpload,
+    onToggleFavorite
 }) => {
     // Loading State
     if (loading) {
@@ -100,6 +101,7 @@ const GalleryGrid = ({
                                     onLoad={onImageLoad}
                                     index={absoluteIndex}
                                     onOpenOptions={onOpenOptions}
+                                    onToggleFavorite={onToggleFavorite}
                                 />
                             );
                         })}
