@@ -16,8 +16,24 @@ export const WebSocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
+  // BUG FIX #2: WebSocket Memory Leak - Track token changes
+  const [currentToken, setCurrentToken] = useState(() => localStorage.getItem('accessToken'));
+
+  // Listen for token changes (login/logout)
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const handleStorageChange = () => {
+      const newToken = localStorage.getItem('accessToken');
+      if (newToken !== currentToken) {
+        setCurrentToken(newToken);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [currentToken]);
+
+  useEffect(() => {
+    const token = currentToken;
 
     if (!token) {
       console.log('[WebSocket] No access token, skipping connection');
@@ -120,9 +136,7 @@ export const WebSocketProvider = ({ children }) => {
       console.log('[WebSocket] Cleaning up connection');
       newSocket.close();
     };
-  // BUG FIX #2: WebSocket Memory Leak
-  // Add token to dependency array to ensure cleanup on token change
-  }, [token]); // token was missing from dependency array
+  }, [currentToken]); // Properly track token changes now
 
   const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
