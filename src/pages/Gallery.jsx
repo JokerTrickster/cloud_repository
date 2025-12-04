@@ -8,6 +8,7 @@ import FileUpload from '../components/FileUpload';
 import ProcessingIndicator from '../components/ProcessingIndicator';
 import TagEditor from '../components/TagEditor';
 import TagEditModal from '../components/TagEditModal';
+import OptionsModal from '../components/OptionsModal';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 import { formatDuration } from '../utils/thumbnail';
 
@@ -15,9 +16,7 @@ import { formatDuration } from '../utils/thumbnail';
 const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onToggleFavorite, onTagUpdate }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
-    const [showMenu, setShowMenu] = useState(false);
-    const menuRef = useRef(null);
+    const [isEditingTags, setIsEditingTags] = useState(false);
     const imgRef = useRef(null);
     const videoRef = useRef(null);
 
@@ -38,21 +37,6 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
             setIsTogglingFavorite(false);
         }
     }, [file.isFavorite]);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setShowMenu(false);
-            }
-        };
-
-        if (showMenu) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [showMenu]);
 
     useEffect(() => {
         // Intersection Observer for lazy loading with preload margin
@@ -302,7 +286,9 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            setShowMenu(!showMenu);
+                            if (onOpenOptions) {
+                                onOpenOptions(file);
+                            }
                         }}
                         style={{
                             background: 'rgba(0,0,0,0.6)',
@@ -320,83 +306,6 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     >
                         <MoreVertical size={16} />
                     </button>
-
-                    {/* Dropdown Menu */}
-                    {showMenu && (
-                        <div
-                            ref={menuRef}
-                            style={{
-                                position: 'absolute',
-                                top: '100%',
-                                right: 0,
-                                marginTop: '4px',
-                                background: 'white',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                padding: '4px',
-                                minWidth: '120px',
-                                zIndex: 30,
-                                overflow: 'hidden'
-                            }}
-                        >
-                            <button
-                                onClick={() => {
-                                    setShowMenu(false);
-                                    onTagUpdate(file); // Open modal via parent
-                                }}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    width: '100%',
-                                    padding: '12px 16px',
-                                    border: 'none',
-                                    background: 'none',
-                                    textAlign: 'left',
-                                    fontSize: '14px',
-                                    color: 'var(--text-primary)',
-                                    cursor: 'pointer',
-                                    borderRadius: '4px'
-                                }}
-                                onMouseOver={e => e.currentTarget.style.background = '#f5f5f5'}
-                                onMouseOut={e => e.currentTarget.style.background = 'none'}
-                            >
-                                <Edit2 size={14} /> 태그 편집
-                            </button>
-
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowMenu(false);
-                                    if (!isTogglingFavorite && onToggleFavorite) {
-                                        setIsTogglingFavorite(true);
-                                        onToggleFavorite(file.id, file.isFavorite);
-                                    }
-                                }}
-                                disabled={isTogglingFavorite}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    width: '100%',
-                                    padding: '12px 16px',
-                                    border: 'none',
-                                    background: 'none',
-                                    textAlign: 'left',
-                                    fontSize: '14px',
-                                    color: file.isFavorite ? '#FFD700' : 'var(--text-primary)',
-                                    cursor: isTogglingFavorite ? 'wait' : 'pointer',
-                                    borderRadius: '4px',
-                                    opacity: isTogglingFavorite ? 0.5 : 1
-                                }}
-                                onMouseOver={e => e.currentTarget.style.background = '#f5f5f5'}
-                                onMouseOut={e => e.currentTarget.style.background = 'none'}
-                            >
-                                <Star size={14} fill={file.isFavorite ? '#FFD700' : 'none'} />
-                                {file.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
-                            </button>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -475,6 +384,7 @@ const Gallery = () => {
     const [error, setError] = useState('');
     const [uploadState, setUploadState] = useState(null); // Background upload state
     const [editingFile, setEditingFile] = useState(null);
+    const [optionsModalFile, setOptionsModalFile] = useState(null);
 
     // Performance Measurement Refs
     const loadStartTime = useRef(0);
@@ -1598,6 +1508,7 @@ const Gallery = () => {
                                             index={absoluteIndex}
                                             onToggleFavorite={handleToggleFavorite}
                                             onTagUpdate={openTagEditor}
+                                            onOpenOptions={setOptionsModalFile}
                                         />
                                     );
                                 })}
@@ -2205,6 +2116,20 @@ const Gallery = () => {
                     file={editingFile}
                     onClose={() => setEditingFile(null)}
                     onUpdate={handleTagUpdate}
+                />
+            )}
+
+            {optionsModalFile && (
+                <OptionsModal
+                    file={optionsModalFile}
+                    onClose={() => setOptionsModalFile(null)}
+                    onTagEdit={(file) => {
+                        setOptionsModalFile(null);
+                        setEditingFile(file);
+                    }}
+                    onToggleFavorite={(fileId, isFavorite) => {
+                        handleToggleFavorite(fileId, isFavorite);
+                    }}
                 />
             )}
         </div>
