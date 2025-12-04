@@ -4,33 +4,18 @@ import ProcessingIndicator from './ProcessingIndicator';
 import { formatDuration } from '../utils/thumbnail';
 
 /**
- * Memoized Gallery Item Component with Lazy Loading
- * 개별 파일 카드 컴포넌트 (이미지/비디오)
+ * Memoized Media Component to prevent re-renders when overlay props change
  */
-const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onOpenOptions, onToggleFavorite }) => {
+const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, index, onLoad }) => {
     const [isLoaded, setIsLoaded] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
     const imgRef = useRef(null);
     const videoRef = useRef(null);
 
-    // 디버깅: 동영상 파일 렌더링 정보
-    if (file.type === 'video') {
-        console.log('[GalleryItem] Rendering video:', {
-            name: file.name,
-            url: file.url,
-            originalUrl: file.originalUrl,
-            processing_status: file.processing_status,
-            isPlaceholder: file.url?.includes('placeholder')
-        });
-    }
-
     useEffect(() => {
-        // Intersection Observer for lazy loading with preload margin
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
                     if (entry.isIntersecting && imgRef.current) {
-                        // Start loading the image
                         const img = imgRef.current;
                         if (!img.src || img.src.includes('data:image')) {
                             img.src = file.url;
@@ -39,7 +24,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 });
             },
             {
-                rootMargin: '50px', // Load images 50px before they enter viewport
+                rootMargin: '50px',
                 threshold: 0.01
             }
         );
@@ -60,60 +45,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
         if (onLoad) onLoad();
     };
 
-    // Handle hover for video preview and image preload
-    const handleMouseEnter = () => {
-        if (!isSelectionMode) {
-            setIsHovered(true);
-            if (file.type === 'image' && file.originalUrl) {
-                // Preload original image on hover
-                const img = new Image();
-                img.src = file.originalUrl;
-            }
-        }
-    };
-
-    const handleMouseLeave = () => {
-        setIsHovered(false);
-    };
-
     return (
-        <div
-            onClick={(e) => {
-                if (isSelectionMode) {
-                    onToggle(file.id);
-                } else if (file.type === 'video') {
-                    e.stopPropagation();
-                    // Reset hover state before opening modal
-                    setIsHovered(false);
-                    // Open video player
-                    if (window.openVideoPlayer) {
-                        window.openVideoPlayer(file);
-                    }
-                } else if (file.type === 'image') {
-                    e.stopPropagation();
-                    // Reset hover state before opening modal
-                    setIsHovered(false);
-                    // Open image viewer
-                    if (window.openImageViewer) {
-                        window.openImageViewer(file);
-                    }
-                }
-            }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            style={{
-                position: 'relative',
-                paddingBottom: '100%',
-                borderRadius: 'var(--radius-sm)',
-                overflow: 'hidden',
-                background: '#eee',
-                cursor: 'pointer',
-                border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none',
-                transform: isHovered && !isSelectionMode ? 'scale(1.05)' : 'scale(1)',
-                transition: 'transform 0.2s ease-in-out',
-                zIndex: isHovered ? 10 : 1
-            }}
-        >
+        <>
             {/* Loading Placeholder */}
             {!isLoaded && (
                 <div style={{
@@ -130,7 +63,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 
             <img
                 ref={imgRef}
-                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" // 1px transparent placeholder
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                 alt={file.name}
                 style={{
                     position: 'absolute',
@@ -147,7 +80,6 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 fetchPriority={index < 6 ? 'high' : 'low'}
                 onLoad={handleLoad}
                 onError={(e) => {
-                    // Fallback to original URL on error
                     if (!e.target.src.includes(file.url)) {
                         e.target.src = file.url;
                     }
@@ -183,8 +115,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: '28px',
-                        height: '28px',
+                        width: '16px', // Reduced from 20px
+                        height: '16px', // Reduced from 20px
                         borderRadius: '50%',
                         background: 'rgba(0,0,0,0.5)',
                         display: 'flex',
@@ -192,7 +124,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         justifyContent: 'center',
                         backdropFilter: 'blur(4px)'
                     }}>
-                        <Play size={14} fill="white" color="white" style={{ marginLeft: '1px' }} />
+                        <Play size={10} fill="white" color="white" style={{ marginLeft: '1px' }} /> {/* Reduced from 12px */}
                     </div>
                     {file.duration && (
                         <div style={{
@@ -213,7 +145,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                 </>
             )}
 
-            {/* Processing Indicator - 처리 중/실패 상태 표시 */}
+            {/* Processing Indicator */}
             {(file.processing_status === 'processing' ||
                 file.processing_status === 'pending' ||
                 file.processing_status === 'failed') && (
@@ -227,6 +159,88 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         <ProcessingIndicator file={file} compact={true} />
                     </div>
                 )}
+        </>
+    );
+});
+
+GalleryItemMedia.displayName = 'GalleryItemMedia';
+
+/**
+ * Memoized Gallery Item Component with Lazy Loading
+ * 개별 파일 카드 컴포넌트 (이미지/비디오)
+ */
+const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onOpenOptions, onToggleFavorite }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    // 디버깅: 동영상 파일 렌더링 정보
+    if (file.type === 'video') {
+        console.log('[GalleryItem] Rendering video:', {
+            name: file.name,
+            url: file.url,
+            originalUrl: file.originalUrl,
+            processing_status: file.processing_status,
+            isPlaceholder: file.url?.includes('placeholder')
+        });
+    }
+
+    // Handle hover for video preview and image preload
+    const handleMouseEnter = () => {
+        if (!isSelectionMode) {
+            setIsHovered(true);
+            if (file.type === 'image' && file.originalUrl) {
+                // Preload original image on hover
+                const img = new Image();
+                img.src = file.originalUrl;
+            }
+        }
+    };
+
+    const handleMouseLeave = () => {
+        setIsHovered(false);
+    };
+
+    return (
+        <div
+            onClick={(e) => {
+                if (isSelectionMode) {
+                    onToggle(file.id);
+                } else if (file.type === 'video') {
+                    e.stopPropagation();
+                    setIsHovered(false);
+                    if (window.openVideoPlayer) {
+                        window.openVideoPlayer(file);
+                    }
+                } else if (file.type === 'image') {
+                    e.stopPropagation();
+                    setIsHovered(false);
+                    if (window.openImageViewer) {
+                        window.openImageViewer(file);
+                    }
+                }
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                position: 'relative',
+                paddingBottom: '100%',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                background: '#eee',
+                cursor: 'pointer',
+                border: isSelectionMode && isSelected ? '3px solid var(--primary)' : 'none',
+                transform: isHovered && !isSelectionMode ? 'scale(1.05)' : 'scale(1)',
+                transition: 'transform 0.2s ease-in-out',
+                zIndex: isHovered ? 10 : 1
+            }}
+        >
+            <GalleryItemMedia
+                file={file}
+                isHovered={isHovered}
+                isSelectionMode={isSelectionMode}
+                isSelected={isSelected}
+                index={index}
+                onLoad={onLoad}
+            />
 
             {/* Tag Overlay - Hide on hover for cleaner view */}
             {!isHovered && (
@@ -332,7 +346,8 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                         left: '8px',
                         zIndex: 20,
                         cursor: 'pointer',
-                        padding: '4px',
+                        width: '20px',
+                        height: '20px',
                         borderRadius: '50%',
                         background: file.isFavorite ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0,0,0,0.3)',
                         backdropFilter: 'blur(2px)',
@@ -343,7 +358,7 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
                     }}
                 >
                     <Star
-                        size={14}
+                        size={12}
                         fill={file.isFavorite ? "#FFD700" : "none"}
                         color={file.isFavorite ? "#FFD700" : "white"}
                         strokeWidth={file.isFavorite ? 0 : 2}
