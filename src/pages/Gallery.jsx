@@ -605,6 +605,15 @@ const Gallery = () => {
                         });
                     }
 
+                    // 🔍 디버깅: 파일 정보 로깅
+                    console.log(`[Gallery] ${file.file_type} file:`, {
+                        name: file.file_name,
+                        thumbnail_url: file.thumbnail_url,
+                        download_url: file.download_url,
+                        url: file.url,
+                        processing_status: file.processing_status
+                    });
+
                     // 썸네일 URL 결정
                     let thumbnailUrl;
                     if (file.file_type === 'video') {
