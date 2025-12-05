@@ -1,7 +1,7 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { UploadIcon } from 'lucide-react';
+import { UploadIcon, Loader } from 'lucide-react';
 import GalleryItem from './GalleryItem';
 
 const GalleryGrid = ({
@@ -16,7 +16,8 @@ const GalleryGrid = ({
     onImageLoad,
     onOpenOptions,
     onShowUpload,
-    onToggleFavorite
+    onToggleFavorite,
+    uploadState
 }) => {
     // Loading State
     if (loading) {
@@ -72,6 +73,97 @@ const GalleryGrid = ({
     // Gallery Grid with Files
     return (
         <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
+            {/* Uploading Files Section */}
+            {uploadState && !uploadState.done && (
+                <div style={{ marginBottom: '32px' }}>
+                    <h3 style={{
+                        fontSize: '14px',
+                        marginBottom: '12px',
+                        color: 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                        업로드 중 ({uploadState.completed}/{uploadState.total})
+                    </h3>
+                    <div className="gallery-grid">
+                        {uploadState.files.map((file, index) => {
+                            const progress = uploadState.progress[index] || 0;
+                            const isCompleted = progress === 100;
+
+                            return (
+                                <div
+                                    key={`uploading-${index}`}
+                                    style={{
+                                        position: 'relative',
+                                        aspectRatio: '1',
+                                        borderRadius: 'var(--radius-md)',
+                                        overflow: 'hidden',
+                                        background: 'var(--surface)',
+                                        border: '2px solid var(--border)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '12px'
+                                    }}
+                                >
+                                    {/* File Icon/Preview */}
+                                    <UploadIcon
+                                        size={40}
+                                        color={isCompleted ? '#4CAF50' : 'var(--primary)'}
+                                        style={{ marginBottom: '8px' }}
+                                    />
+
+                                    {/* File Name */}
+                                    <div style={{
+                                        fontSize: '12px',
+                                        color: 'var(--text-secondary)',
+                                        textAlign: 'center',
+                                        marginBottom: '8px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        width: '100%',
+                                        padding: '0 4px'
+                                    }}>
+                                        {file.name}
+                                    </div>
+
+                                    {/* Progress Bar */}
+                                    <div style={{
+                                        width: '100%',
+                                        height: '6px',
+                                        background: 'var(--background)',
+                                        borderRadius: '3px',
+                                        overflow: 'hidden',
+                                        marginBottom: '4px'
+                                    }}>
+                                        <div style={{
+                                            width: `${progress}%`,
+                                            height: '100%',
+                                            background: isCompleted ? '#4CAF50' : 'var(--primary)',
+                                            transition: 'width 0.3s ease'
+                                        }} />
+                                    </div>
+
+                                    {/* Progress Percentage */}
+                                    <div style={{
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        color: isCompleted ? '#4CAF50' : 'var(--primary)'
+                                    }}>
+                                        {progress}%
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Existing Files by Date */}
             {Object.entries(groupedFiles).map(([date, dateFiles]) => (
                 <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
                     <h3 style={{

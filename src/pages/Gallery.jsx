@@ -542,6 +542,7 @@ const Gallery = () => {
                 onOpenOptions={setOptionsModalFile}
                 onShowUpload={() => setShowUpload(true)}
                 onToggleFavorite={handleToggleFavorite}
+                uploadState={uploadState}
             />
 
             {/* File Upload Modal */}
