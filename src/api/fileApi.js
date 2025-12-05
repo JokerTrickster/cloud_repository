@@ -628,10 +628,11 @@ export const fileValidation = {
   },
 
   /**
-   * 최대 파일 크기 (5GB)
-   * S3 Presigned URL 제한으로 인한 제약
+   * 최대 파일 크기 (무제한)
+   * 멀티파트 업로드로 5GB 이상 파일도 지원
+   * 실제 제한은 브라우저 메모리와 네트워크 환경에 의존
    */
-  MAX_FILE_SIZE: 5 * 1024 * 1024 * 1024, // 5GB in bytes
+  MAX_FILE_SIZE: Infinity, // No limit with multipart upload
 
   /**
    * 파일 타입 검증
