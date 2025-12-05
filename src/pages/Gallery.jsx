@@ -303,7 +303,7 @@ const Gallery = () => {
 
         // 백그라운드에서 업로드 실행
         uploadFn(
-            (fileIndex, progress) => {
+            (fileIndex, progress, status) => {
                 // BUG FIX #1: Upload Progress Race Condition
                 // Use functional update to avoid state collision during concurrent uploads
                 setUploadState(prev => {
@@ -313,6 +313,8 @@ const Gallery = () => {
                     // Atomic update: ensure progress object is immutable
                     const newProgress = { ...prev.progress, [fileIndex]: progress };
                     const completedCount = Object.values(newProgress).filter(p => p === 100).length;
+
+                    console.log(`[Gallery] Upload progress - File ${fileIndex}: ${progress}% (${status})`);
 
                     return {
                         ...prev,

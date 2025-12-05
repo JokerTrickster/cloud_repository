@@ -220,11 +220,17 @@ const multipartUploadApi = {
       const uploadedParts = [];
       let completedParts = 0;
 
+      // Initial progress report
+      if (onProgress) {
+        onProgress(0, totalParts, 0);
+      }
+
       for (let i = 0; i < totalParts; i += concurrentUploads) {
         const batch = urls.slice(i, i + concurrentUploads);
+        const batchStartIndex = i; // Capture for closure
 
         const batchResults = await Promise.all(
-          batch.map(async ({ partNumber, url }) => {
+          batch.map(async ({ partNumber, url }, batchIndex) => {
             const start = (partNumber - 1) * partSize;
             const end = Math.min(start + partSize, file.size);
             const blob = file.slice(start, end);
@@ -237,12 +243,13 @@ const multipartUploadApi = {
               file.type,
               3,
               (partProgress) => {
-                // Calculate overall progress
+                // Calculate overall progress with current batch position
+                const currentCompletedParts = batchStartIndex + batchIndex;
                 const overallProgress = Math.round(
-                  ((completedParts + (partProgress / 100)) / totalParts) * 100
+                  ((currentCompletedParts + (partProgress / 100)) / totalParts) * 100
                 );
                 if (onProgress) {
-                  onProgress(completedParts, totalParts, overallProgress);
+                  onProgress(currentCompletedParts, totalParts, overallProgress);
                 }
               }
             );
