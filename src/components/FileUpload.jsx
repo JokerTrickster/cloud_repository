@@ -238,8 +238,8 @@ const FileUpload = ({ onUploadStart, onClose }) => {
                 파일을 드래그하거나 클릭하여 선택하세요
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                이미지: JPG, PNG, GIF, WebP (최대 100MB)<br />
-                동영상: MP4, WebM, AVI, MOV (최대 100MB)<br />
+                이미지: JPG, PNG, GIF, WebP (최대 5GB)<br />
+                동영상: MP4, WebM, AVI, MOV (최대 5GB)<br />
                 최대 30개까지 선택 가능
               </p>
             </div>

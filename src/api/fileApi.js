@@ -535,6 +535,12 @@ export const fileValidation = {
   },
 
   /**
+   * 최대 파일 크기 (5GB)
+   * S3 Presigned URL 제한으로 인한 제약
+   */
+  MAX_FILE_SIZE: 5 * 1024 * 1024 * 1024, // 5GB in bytes
+
+  /**
    * 파일 타입 검증
    *
    * @param {File} file
@@ -549,6 +555,30 @@ export const fileValidation = {
   },
 
   /**
+   * 파일 크기 검증
+   *
+   * @param {File} file
+   * @returns {boolean}
+   */
+  isValidSize(file) {
+    return file.size <= this.MAX_FILE_SIZE;
+  },
+
+  /**
+   * 파일 크기를 읽기 쉬운 형식으로 변환
+   *
+   * @param {number} bytes
+   * @returns {string}
+   */
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  },
+
+  /**
    * 전체 검증
    *
    * @param {File} file
@@ -559,6 +589,13 @@ export const fileValidation = {
       return {
         valid: false,
         error: `지원하지 않는 파일 형식입니다. (${file.type})`,
+      };
+    }
+
+    if (!this.isValidSize(file)) {
+      return {
+        valid: false,
+        error: `파일 크기가 너무 큽니다. (${this.formatFileSize(file.size)} / 최대 5GB)`,
       };
     }
 
