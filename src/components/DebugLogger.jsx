@@ -11,8 +11,15 @@ const DebugLogger = () => {
     const [isVisible, setIsVisible] = useState(true);
 
     useEffect(() => {
+        console.log('🔧 DebugLogger mounted!');
+        console.log('🔧 Environment:', import.meta.env.MODE);
+        console.log('🔧 Is production?', import.meta.env.PROD);
+
         // 개발 환경에서만 활성화
-        if (import.meta.env.PROD) return;
+        if (import.meta.env.PROD) {
+            console.log('🔧 DebugLogger disabled in production');
+            return;
+        }
 
         // 콘솔 로그를 가로채서 화면에 표시
         const originalLog = console.log;

@@ -137,6 +137,10 @@ const FileUpload = ({ onUploadStart, onClose }) => {
   };
 
   const handleUpload = () => {
+    console.log('📤 FileUpload: handleUpload called');
+    console.log('📤 Selected files:', selectedFiles.length);
+    console.log('📤 Files:', selectedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB)`));
+
     if (selectedFiles.length === 0) {
       console.warn('No files selected');
       return;
@@ -144,6 +148,7 @@ const FileUpload = ({ onUploadStart, onClose }) => {
 
     // 업로드 함수 생성 (백그라운드 실행용)
     const uploadFn = (onProgress) => {
+      console.log('📤 uploadFn called with onProgress callback');
       return fileApi.uploadBatchFiles(
         selectedFiles,
         onProgress,
@@ -152,8 +157,11 @@ const FileUpload = ({ onUploadStart, onClose }) => {
     };
 
     // Gallery로 업로드 시작 알림
+    console.log('📤 Calling onUploadStart...');
     if (onUploadStart) {
       onUploadStart(selectedFiles, fileTags, uploadFn);
+    } else {
+      console.error('📤 onUploadStart is not defined!');
     }
 
     // 모달은 Gallery의 handleUploadStart에서 닫음

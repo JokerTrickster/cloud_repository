@@ -136,25 +136,32 @@ const fileApi = {
    * @returns {Promise<Array>} 업로드 결과 배열
    */
   async uploadBatchFiles(files, onProgress, fileTags = {}) {
+    console.log('🚀 uploadBatchFiles called with', files.length, 'files');
+    console.log('🚀 Files:', files.map(f => `${f.name} (${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB)`));
+
     if (files.length > 30) {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
     const MULTIPART_THRESHOLD = 5 * 1024 * 1024 * 1024; // 5GB
+    console.log('🚀 MULTIPART_THRESHOLD:', (MULTIPART_THRESHOLD / 1024 / 1024 / 1024).toFixed(2), 'GB');
 
     // Separate files into standard and multipart uploads
     const standardFiles = [];
     const multipartFiles = [];
 
     files.forEach((file, index) => {
+      console.log(`🚀 Checking file ${index}: ${file.name}, size: ${file.size} bytes (${(file.size / 1024 / 1024 / 1024).toFixed(2)}GB)`);
       if (file.size > MULTIPART_THRESHOLD) {
+        console.log(`  ✅ Will use MULTIPART (size ${file.size} > ${MULTIPART_THRESHOLD})`);
         multipartFiles.push({ file, index });
       } else {
+        console.log(`  ✅ Will use STANDARD (size ${file.size} <= ${MULTIPART_THRESHOLD})`);
         standardFiles.push({ file, index });
       }
     });
 
-    console.log(`[Batch Upload] Standard: ${standardFiles.length}, Multipart: ${multipartFiles.length}`);
+    console.log(`🚀 [Batch Upload] Standard: ${standardFiles.length}, Multipart: ${multipartFiles.length}`);
 
     const results = [];
 
