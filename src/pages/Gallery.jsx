@@ -13,6 +13,7 @@ import GalleryToolbar from '../components/GalleryToolbar';
 import GallerySearchBar from '../components/GallerySearchBar';
 import TagFilterBar from '../components/TagFilterBar';
 import GalleryGrid from '../components/GalleryGrid';
+import DebugLogger from '../components/DebugLogger';
 import { useGalleryFiles } from '../hooks/useGalleryFiles';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 
@@ -786,6 +787,9 @@ const Gallery = () => {
                     }}
                 />
             )}
+
+            {/* Debug Logger for mobile debugging */}
+            <DebugLogger />
         </div>
     );
 };
