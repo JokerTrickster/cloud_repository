@@ -7,7 +7,6 @@ import OptionsModal from '../components/OptionsModal';
 import DateRangeCalendar from '../components/DateRangeCalendar';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import ImageViewerModal from '../components/ImageViewerModal';
-import UploadProgressToast from '../components/UploadProgressToast';
 import SelectionActionBar from '../components/SelectionActionBar';
 import GalleryFilters from '../components/GalleryFilters';
 import GalleryToolbar from '../components/GalleryToolbar';
@@ -72,6 +71,23 @@ const Gallery = () => {
             window.removeEventListener('file:processed', handleFileProcessed);
         };
     }, []);
+
+    // Warn user before closing tab/window if upload is in progress
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (uploadState && !uploadState.done) {
+                e.preventDefault();
+                e.returnValue = '업로드가 진행 중입니다. 페이지를 나가면 업로드가 중단됩니다.';
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [uploadState]);
 
     // 파일 처리 상태 업데이트 핸들러
     const handleProcessingStatusUpdate = useCallback((statusResults) => {
@@ -563,10 +579,97 @@ const Gallery = () => {
             />
 
             {/* Upload Progress Toast */}
-            <UploadProgressToast
-                uploadState={uploadState}
-                onClose={() => setUploadState(null)}
-            />
+            {/* Fixed Upload Progress Bar at Bottom */}
+            {uploadState && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'var(--surface)',
+                    borderTop: '1px solid var(--border)',
+                    padding: '16px 24px',
+                    boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+                    zIndex: 1000
+                }}>
+                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div>
+                                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                    {uploadState.done ? '업로드 완료' : '파일 업로드 중...'}
+                                </span>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
+                                    {uploadState.completed}/{uploadState.total} 파일
+                                    {uploadState.failed > 0 && ` (실패: ${uploadState.failed})`}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setUploadState(null)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    color: 'var(--text-tertiary)'
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Individual File Progress */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {uploadState.files.map((file, index) => {
+                                const progress = uploadState.progress[index] || 0;
+                                const isComplete = progress === 100;
+                                return (
+                                    <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{
+                                            flex: 1,
+                                            fontSize: '13px',
+                                            color: 'var(--text-secondary)',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            minWidth: 0
+                                        }}>
+                                            {file.name}
+                                        </div>
+                                        <div style={{
+                                            flex: 2,
+                                            position: 'relative',
+                                            height: '6px',
+                                            background: 'var(--background)',
+                                            borderRadius: '3px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                height: '100%',
+                                                width: `${progress}%`,
+                                                background: isComplete ? '#4CAF50' : 'var(--primary)',
+                                                transition: 'width 0.3s ease',
+                                                borderRadius: '3px'
+                                            }} />
+                                        </div>
+                                        <div style={{
+                                            width: '50px',
+                                            textAlign: 'right',
+                                            fontSize: '13px',
+                                            fontWeight: '500',
+                                            color: isComplete ? '#4CAF50' : 'var(--text-primary)'
+                                        }}>
+                                            {progress}%
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Tag Edit Modal */}
             {editingFile && (
                 <TagEditModal

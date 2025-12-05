@@ -6,7 +6,10 @@ import { formatDuration } from '../utils/thumbnail';
 /**
  * Memoized Media Component to prevent re-renders when overlay props change
  */
-const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, index, onLoad }) => {
+/**
+ * Memoized Media Component to prevent re-renders when overlay props change
+ */
+const GalleryItemMedia = memo(({ url, type, duration, processing_status, name, isHovered, isSelectionMode, isSelected, index, onLoad }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const imgRef = useRef(null);
     const videoRef = useRef(null);
@@ -18,7 +21,7 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
                     if (entry.isIntersecting && imgRef.current) {
                         const img = imgRef.current;
                         if (!img.src || img.src.includes('data:image')) {
-                            img.src = file.url;
+                            img.src = url;
                         }
                     }
                 });
@@ -38,7 +41,7 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
                 observer.unobserve(imgRef.current);
             }
         };
-    }, [file.url]);
+    }, [url]);
 
     const handleLoad = () => {
         setIsLoaded(true);
@@ -64,7 +67,7 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
             <img
                 ref={imgRef}
                 src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                alt={file.name}
+                alt={name}
                 style={{
                     position: 'absolute',
                     top: 0,
@@ -80,17 +83,17 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
                 fetchPriority={index < 6 ? 'high' : 'low'}
                 onLoad={handleLoad}
                 onError={(e) => {
-                    if (!e.target.src.includes(file.url)) {
-                        e.target.src = file.url;
+                    if (!e.target.src.includes(url)) {
+                        e.target.src = url;
                     }
                 }}
             />
 
             {/* Video Preview Overlay */}
-            {isHovered && file.type === 'video' && (
+            {isHovered && type === 'video' && (
                 <video
                     ref={videoRef}
-                    src={file.url}
+                    src={url}
                     autoPlay
                     muted
                     loop
@@ -108,25 +111,35 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
             )}
 
             {/* Video Indicator & Duration */}
-            {file.type === 'video' && !isHovered && (
+            {type === 'video' && (
                 <>
                     <div style={{
                         position: 'absolute',
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: '16px', // Reduced from 20px
-                        height: '16px', // Reduced from 20px
+                        width: '12px', // Reduced to ~half of 20px
+                        height: '12px',
                         borderRadius: '50%',
                         background: 'rgba(0,0,0,0.5)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backdropFilter: 'blur(4px)'
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 2 // Ensure it stays on top of video preview if desired, or let hover hide it? User said "fixed", so maybe zIndex 3?
+                        // Actually user said "disappears when state changes", implying re-render issue.
+                        // But if they want it "fixed", they might mean "always visible".
+                        // If I put zIndex 3, it will be on top of the playing video.
+                        // Usually play icon disappears when playing.
+                        // "동영상은 고정으로 박아둬야되는데 왜 자꾸 상태 변경할때마다 사라지는지 궁금하다"
+                        // "Video (icon) should be fixed, why does it disappear whenever state changes?"
+                        // This strongly suggests the re-render issue.
+                        // If I remove !isHovered, it will show during hover/play.
+                        // Let's keep it simple: remove !isHovered.
                     }}>
-                        <Play size={10} fill="white" color="white" style={{ marginLeft: '1px' }} /> {/* Reduced from 12px */}
+                        <Play size={8} fill="white" color="white" style={{ marginLeft: '1px' }} />
                     </div>
-                    {file.duration && (
+                    {duration && (
                         <div style={{
                             position: 'absolute',
                             bottom: '8px',
@@ -139,16 +152,16 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
                             fontWeight: '500',
                             zIndex: 2
                         }}>
-                            {formatDuration(file.duration)}
+                            {formatDuration(duration)}
                         </div>
                     )}
                 </>
             )}
 
             {/* Processing Indicator */}
-            {(file.processing_status === 'processing' ||
-                file.processing_status === 'pending' ||
-                file.processing_status === 'failed') && (
+            {(processing_status === 'processing' ||
+                processing_status === 'pending' ||
+                processing_status === 'failed') && (
                     <div style={{
                         position: 'absolute',
                         top: '8px',
@@ -156,7 +169,7 @@ const GalleryItemMedia = memo(({ file, isHovered, isSelectionMode, isSelected, i
                         maxWidth: 'calc(100% - 16px)',
                         zIndex: 3
                     }}>
-                        <ProcessingIndicator file={file} compact={true} />
+                        <ProcessingIndicator file={{ processing_status }} compact={true} />
                     </div>
                 )}
         </>
@@ -234,7 +247,11 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
             }}
         >
             <GalleryItemMedia
-                file={file}
+                url={file.url}
+                type={file.type}
+                duration={file.duration}
+                processing_status={file.processing_status}
+                name={file.name}
                 isHovered={isHovered}
                 isSelectionMode={isSelectionMode}
                 isSelected={isSelected}
