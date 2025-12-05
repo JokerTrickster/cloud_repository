@@ -1,6 +1,7 @@
 import axios from 'axios';
 import client from './client';
 import { generateThumbnail, generateVideoThumbnail, getVideoDuration } from '../utils/thumbnail';
+import multipartUploadApi from './multipartUploadApi';
 
 /**
  * CloudRepository File API Client
@@ -85,12 +86,29 @@ const fileApi = {
 
   /**
    * 전체 업로드 플로우 (URL 요청 + S3 업로드)
+   * Automatically uses multipart upload for files over 5GB
    *
    * @param {File} file - 업로드할 파일
    * @param {Function} onProgress - 진행률 콜백 (optional)
    * @returns {Promise<Object>} { file_id, s3_key }
    */
   async uploadFile(file, onProgress) {
+    const MULTIPART_THRESHOLD = 5 * 1024 * 1024 * 1024; // 5GB
+
+    // Use multipart upload for files over 5GB
+    if (file.size > MULTIPART_THRESHOLD) {
+      console.log(`[Upload] File size ${file.size} exceeds 5GB, using multipart upload`);
+      return await multipartUploadApi.uploadFile(
+        file,
+        (completedParts, totalParts, percentage) => {
+          if (onProgress) {
+            onProgress(percentage);
+          }
+        }
+      );
+    }
+
+    // Standard upload for files under 5GB
     // 1. 업로드 URL 요청
     const uploadInfo = await this.requestUploadUrl({
       file_name: file.name,
@@ -110,6 +128,7 @@ const fileApi = {
 
   /**
    * 배치 업로드 플로우 (썸네일 포함)
+   * Automatically uses multipart upload for files over 5GB
    *
    * @param {Array<File>} files - 업로드할 파일 배열 (최대 30개)
    * @param {Function} onProgress - 진행률 콜백 (fileIndex, progress)
@@ -121,83 +140,157 @@ const fileApi = {
       throw new Error('최대 30개까지만 업로드할 수 있습니다.');
     }
 
-    // ❌ Duration 추출 제거됨 (백엔드에서 처리)
-    // ❌ 썸네일 생성 제거됨 (백엔드에서 처리)
+    const MULTIPART_THRESHOLD = 5 * 1024 * 1024 * 1024; // 5GB
 
-    // 1. 배치 업로드 URL 요청 (태그만 포함)
-    const fileInfos = files.map((file, index) => {
-      const info = {
-        file_name: file.name,
-        content_type: file.type,
-        file_type: file.type.startsWith('image/') ? 'image' : 'video',
-        file_size: file.size,
-      };
+    // Separate files into standard and multipart uploads
+    const standardFiles = [];
+    const multipartFiles = [];
 
-      // 태그 추가
-      const tags = fileTags[index]?.tags || [];
-      if (tags.length > 0) {
-        info.tags = tags;
+    files.forEach((file, index) => {
+      if (file.size > MULTIPART_THRESHOLD) {
+        multipartFiles.push({ file, index });
+      } else {
+        standardFiles.push({ file, index });
       }
-
-      return info;
     });
 
-    console.log('📤 Sending batch upload request:', JSON.stringify(fileInfos, null, 2));
-    const batchResponse = await this.requestBatchUploadUrl(fileInfos);
-    console.log('✅ Batch upload response:', batchResponse);
+    console.log(`[Batch Upload] Standard: ${standardFiles.length}, Multipart: ${multipartFiles.length}`);
 
-    // 2. S3에 원본 파일만 업로드 (썸네일은 백엔드에서 처리)
-    const uploadPromises = batchResponse.results.map(async (result, index) => {
-      const file = files[index];
+    const results = [];
 
-      // 초기 상태: 업로드 중
+    // Handle multipart uploads (sequential to avoid overwhelming the system)
+    for (const { file, index } of multipartFiles) {
+      console.log(`[Batch Upload] Processing multipart upload ${index + 1}/${files.length}: ${file.name}`);
+
       if (onProgress) {
         onProgress(index, 0, 'uploading');
       }
 
-      // S3에 원본 파일 업로드 (100% 진행률)
-      await this.uploadToS3(
-        result.upload_url,
-        file,
-        (progress) => {
-          if (onProgress) {
-            onProgress(index, progress, 'uploading');
-          }
-        }
-      );
-
-      // BUG FIX #3: Upload Notification Silent Failure
-      // Set processing_status flag on failure to track incomplete uploads
-      let processingStatus = file.type.startsWith('video/') ? 'processing' : 'completed';
-
-      // 업로드 완료 통지 (백엔드에서 백그라운드 처리 시작)
       try {
-        console.log(`📡 Notifying upload completion for file ${result.file_id}...`);
-        await client.post(`/api/v1/files/${result.file_id}/complete-upload`, {}, {
-          baseURL: import.meta.env.VITE_FILE_API_URL
+        const result = await multipartUploadApi.uploadFile(
+          file,
+          (completedParts, totalParts, percentage) => {
+            if (onProgress) {
+              onProgress(index, percentage, 'uploading');
+            }
+          }
+        );
+
+        // Notify backend of upload completion
+        let processingStatus = file.type.startsWith('video/') ? 'processing' : 'completed';
+        try {
+          console.log(`📡 Notifying upload completion for file ${result.fileId}...`);
+          await client.post(`/api/v1/files/${result.fileId}/complete-upload`, {}, {
+            baseURL: import.meta.env.VITE_FILE_API_URL
+          });
+          console.log(`✅ Upload completion notified for file ${result.fileId}`);
+        } catch (err) {
+          console.error(`❌ Failed to notify upload completion for ${file.name}:`, err);
+          processingStatus = 'failed';
+        }
+
+        if (onProgress) {
+          onProgress(index, 100, 'completed');
+        }
+
+        results.push({
+          file_id: result.fileId,
+          s3_key: result.s3Key,
+          file_name: file.name,
+          processing_status: processingStatus,
+          index
         });
-        console.log(`✅ Upload completion notified for file ${result.file_id}`);
-      } catch (err) {
-        // Mark as failed if notification fails (backend may not process the file)
-        console.error(`❌ Failed to notify upload completion for ${file.name}:`, err);
-        processingStatus = 'failed'; // Set status to failed to indicate incomplete upload
+      } catch (error) {
+        console.error(`[Batch Upload] Multipart upload failed for ${file.name}:`, error);
+        if (onProgress) {
+          onProgress(index, 0, 'failed');
+        }
+        results.push({
+          file_name: file.name,
+          error: error.message,
+          processing_status: 'failed',
+          index
+        });
       }
+    }
 
-      // 최종 진행률 100%
-      if (onProgress) {
-        onProgress(index, 100, 'completed');
-      }
+    // Handle standard uploads (existing batch logic)
+    if (standardFiles.length > 0) {
+      const fileInfos = standardFiles.map(({ file, index }) => {
+        const info = {
+          file_name: file.name,
+          content_type: file.type,
+          file_type: file.type.startsWith('image/') ? 'image' : 'video',
+          file_size: file.size,
+        };
 
-      return {
-        file_id: result.file_id,
-        s3_key: result.s3_key,
-        file_name: file.name,
-        // Use updated processing status (reflects notification failure)
-        processing_status: processingStatus
-      };
-    });
+        // 태그 추가
+        const tags = fileTags[index]?.tags || [];
+        if (tags.length > 0) {
+          info.tags = tags;
+        }
 
-    return Promise.all(uploadPromises);
+        return info;
+      });
+
+      console.log('📤 Sending batch upload request:', JSON.stringify(fileInfos, null, 2));
+      const batchResponse = await this.requestBatchUploadUrl(fileInfos);
+      console.log('✅ Batch upload response:', batchResponse);
+
+      // S3에 원본 파일만 업로드
+      const uploadPromises = batchResponse.results.map(async (result, batchIndex) => {
+        const { file, index } = standardFiles[batchIndex];
+
+        // 초기 상태: 업로드 중
+        if (onProgress) {
+          onProgress(index, 0, 'uploading');
+        }
+
+        // S3에 원본 파일 업로드 (100% 진행률)
+        await this.uploadToS3(
+          result.upload_url,
+          file,
+          (progress) => {
+            if (onProgress) {
+              onProgress(index, progress, 'uploading');
+            }
+          }
+        );
+
+        let processingStatus = file.type.startsWith('video/') ? 'processing' : 'completed';
+
+        // 업로드 완료 통지
+        try {
+          console.log(`📡 Notifying upload completion for file ${result.file_id}...`);
+          await client.post(`/api/v1/files/${result.file_id}/complete-upload`, {}, {
+            baseURL: import.meta.env.VITE_FILE_API_URL
+          });
+          console.log(`✅ Upload completion notified for file ${result.file_id}`);
+        } catch (err) {
+          console.error(`❌ Failed to notify upload completion for ${file.name}:`, err);
+          processingStatus = 'failed';
+        }
+
+        // 최종 진행률 100%
+        if (onProgress) {
+          onProgress(index, 100, 'completed');
+        }
+
+        return {
+          file_id: result.file_id,
+          s3_key: result.s3_key,
+          file_name: file.name,
+          processing_status: processingStatus,
+          index
+        };
+      });
+
+      const standardResults = await Promise.all(uploadPromises);
+      results.push(...standardResults);
+    }
+
+    // Sort results by original index
+    return results.sort((a, b) => a.index - b.index);
   },
 
   /**
