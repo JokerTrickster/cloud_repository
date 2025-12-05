@@ -72,6 +72,55 @@ const Gallery = () => {
         };
     }, []);
 
+    // Screen Wake Lock
+    const wakeLockRef = useRef(null);
+
+    useEffect(() => {
+        const requestWakeLock = async () => {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                    console.log('[WakeLock] Screen Wake Lock active');
+                } catch (err) {
+                    console.error('[WakeLock] Failed to acquire lock:', err);
+                }
+            }
+        };
+
+        const releaseWakeLock = async () => {
+            if (wakeLockRef.current) {
+                try {
+                    await wakeLockRef.current.release();
+                    wakeLockRef.current = null;
+                    console.log('[WakeLock] Screen Wake Lock released');
+                } catch (err) {
+                    console.error('[WakeLock] Failed to release lock:', err);
+                }
+            }
+        };
+
+        // If uploading and not done, request lock
+        if (uploadState && !uploadState.done) {
+            requestWakeLock();
+        } else {
+            releaseWakeLock();
+        }
+
+        // Re-acquire lock if visibility changes (e.g. user switches tabs and comes back)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && uploadState && !uploadState.done) {
+                requestWakeLock();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            releaseWakeLock();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [uploadState]);
+
     // Warn user before closing tab/window if upload is in progress
     useEffect(() => {
         const handleBeforeUnload = (e) => {
@@ -618,6 +667,24 @@ const Gallery = () => {
                             </button>
                         </div>
 
+                        {/* Warning Message */}
+                        {!uploadState.done && (
+                            <div style={{
+                                marginBottom: '12px',
+                                padding: '8px 12px',
+                                background: '#FFF3E0',
+                                border: '1px solid #FFE0B2',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                color: '#E65100',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}>
+                                <span>⚠️</span>
+                                <span>업로드 중에는 화면을 끄거나 페이지를 벗어나지 마세요.</span>
+                            </div>
+                        )}
                         {/* Individual File Progress */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {uploadState.files.map((file, index) => {
