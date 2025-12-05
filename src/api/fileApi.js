@@ -167,15 +167,21 @@ const fileApi = {
       }
 
       try {
-        console.log(`[Batch Upload] Calling multipartUploadApi.uploadFile for ${file.name}...`);
+        console.log(`[Batch Upload] ========== MULTIPART START ==========`);
+        console.log(`[Batch Upload] File: ${file.name}, Size: ${(file.size / (1024 ** 3)).toFixed(2)} GB, Index: ${index}`);
+        console.log(`[Batch Upload] Calling multipartUploadApi.uploadFile...`);
+
         const result = await multipartUploadApi.uploadFile(
           file,
           (completedParts, totalParts, percentage) => {
+            console.log(`[Batch Upload] Progress - Parts: ${completedParts}/${totalParts}, ${percentage}%`);
             if (onProgress) {
               onProgress(index, percentage, 'uploading');
             }
           }
         );
+
+        console.log(`[Batch Upload] Upload completed:`, result);
 
         // Notify backend of upload completion
         let processingStatus = file.type.startsWith('video/') ? 'processing' : 'completed';
@@ -202,7 +208,12 @@ const fileApi = {
           index
         });
       } catch (error) {
-        console.error(`[Batch Upload] Multipart upload failed for ${file.name}:`, error);
+        console.error(`[Batch Upload] ========== MULTIPART FAILED ==========`);
+        console.error(`[Batch Upload] File: ${file.name}`);
+        console.error(`[Batch Upload] Error:`, error);
+        console.error(`[Batch Upload] Error message:`, error.message);
+        console.error(`[Batch Upload] Error stack:`, error.stack);
+
         if (onProgress) {
           onProgress(index, 0, 'failed');
         }

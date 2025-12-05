@@ -7,7 +7,7 @@ import { X, ChevronDown, ChevronUp } from 'lucide-react';
  */
 const DebugLogger = () => {
     const [logs, setLogs] = useState([]);
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true); // 기본적으로 확장된 상태
     const [isVisible, setIsVisible] = useState(true);
 
     useEffect(() => {
@@ -42,14 +42,8 @@ const DebugLogger = () => {
 
         console.log = (...args) => {
             originalLog(...args);
-            // Gallery, Batch Upload, Multipart 관련 로그만 필터링
-            const message = args[0];
-            if (typeof message === 'string' &&
-                (message.includes('[Gallery]') ||
-                 message.includes('[Batch Upload]') ||
-                 message.includes('[Multipart]'))) {
-                addLog('log', args);
-            }
+            // 모든 로그를 표시 (디버깅을 위해)
+            addLog('log', args);
         };
 
         console.error = (...args) => {
@@ -59,11 +53,8 @@ const DebugLogger = () => {
 
         console.warn = (...args) => {
             originalWarn(...args);
-            const message = args[0];
-            // WebSocket 경고는 제외
-            if (typeof message === 'string' && !message.includes('WebSocket')) {
-                addLog('warn', args);
-            }
+            // 모든 경고를 표시
+            addLog('warn', args);
         };
 
         // 클린업
@@ -79,19 +70,20 @@ const DebugLogger = () => {
     return (
         <div style={{
             position: 'fixed',
-            bottom: isExpanded ? '0' : '60px',
+            bottom: '0',
             left: '0',
             right: '0',
-            zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.95)',
+            zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.98)',
             color: '#00ff00',
             fontFamily: 'monospace',
-            fontSize: '11px',
-            maxHeight: isExpanded ? '50vh' : '40px',
+            fontSize: '12px',
+            maxHeight: isExpanded ? '60vh' : '50px',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)',
-            transition: 'all 0.3s ease'
+            boxShadow: '0 -4px 20px rgba(0, 255, 0, 0.3)',
+            transition: 'all 0.3s ease',
+            border: '2px solid #00ff00'
         }}>
             {/* Header */}
             <div style={{
