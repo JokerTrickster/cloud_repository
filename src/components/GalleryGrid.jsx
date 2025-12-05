@@ -87,7 +87,37 @@ const GalleryGrid = ({
                         <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
                         업로드 중 ({uploadState.completed}/{uploadState.total})
                     </h3>
-                    <div className="gallery-grid">
+                    <div style={{
+                        display: 'flex',
+                        gap: '12px',
+                        overflowX: 'auto',
+                        overflowY: 'hidden',
+                        paddingBottom: '8px',
+                        marginBottom: '8px'
+                    }} className="upload-scroll">
+                        <style>{`
+                            .upload-scroll::-webkit-scrollbar {
+                                height: 6px;
+                            }
+                            .upload-scroll::-webkit-scrollbar-track {
+                                background: var(--background);
+                                border-radius: 3px;
+                            }
+                            .upload-scroll::-webkit-scrollbar-thumb {
+                                background: var(--border);
+                                border-radius: 3px;
+                            }
+                            .upload-scroll::-webkit-scrollbar-thumb:hover {
+                                background: var(--text-tertiary);
+                            }
+                            @media (min-width: 768px) {
+                                .upload-scroll {
+                                    display: grid;
+                                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                                    overflow: visible;
+                                }
+                            }
+                        `}</style>
                         {uploadState.files.map((file, index) => {
                             const progress = uploadState.progress[index] || 0;
                             const isCompleted = progress === 100;
@@ -97,7 +127,9 @@ const GalleryGrid = ({
                                     key={`uploading-${index}`}
                                     style={{
                                         position: 'relative',
-                                        aspectRatio: '1',
+                                        minWidth: '140px',
+                                        width: '140px',
+                                        height: '140px',
                                         borderRadius: 'var(--radius-md)',
                                         overflow: 'hidden',
                                         background: 'var(--surface)',
@@ -106,7 +138,8 @@ const GalleryGrid = ({
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        padding: '12px'
+                                        padding: '12px',
+                                        flexShrink: 0
                                     }}
                                 >
                                     {/* File Icon/Preview */}
