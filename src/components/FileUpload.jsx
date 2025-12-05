@@ -176,7 +176,6 @@ const FileUpload = ({ onUploadStart, onClose }) => {
       <div style={{
         background: 'var(--surface)',
         borderRadius: 'var(--radius-lg)',
-        borderRadius: 'var(--radius-lg)',
         width: '90%',
         maxWidth: '600px',
         maxHeight: '80vh',
