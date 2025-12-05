@@ -288,6 +288,9 @@ const Gallery = () => {
     };
 
     const handleUploadStart = (files, fileTags, uploadFn) => {
+        console.log('[Gallery] Starting upload for', files.length, 'files');
+        console.log('[Gallery] File sizes:', files.map(f => `${f.name}: ${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB`));
+
         // 업로드 상태 초기화
         setUploadState({
             files: files.map(f => ({ name: f.name, size: f.size })),
@@ -298,11 +301,16 @@ const Gallery = () => {
             done: false
         });
 
+        console.log('[Gallery] Upload state initialized, closing modal');
+
         // 모달 즉시 닫기
         setShowUpload(false);
 
+        console.log('[Gallery] Calling uploadFn...');
+
         // 백그라운드에서 업로드 실행
-        uploadFn(
+        try {
+            uploadFn(
             (fileIndex, progress, status) => {
                 // BUG FIX #1: Upload Progress Race Condition
                 // Use functional update to avoid state collision during concurrent uploads
@@ -324,9 +332,13 @@ const Gallery = () => {
                 });
             }
         ).then(results => {
+            console.log('[Gallery] Upload completed, results:', results);
+
             // 업로드 완료
             const successCount = results.filter(r => r.file_id).length;
             const failedCount = results.filter(r => !r.file_id).length;
+
+            console.log(`[Gallery] Success: ${successCount}, Failed: ${failedCount}`);
 
             setUploadState(prev => prev ? {
                 ...prev,
@@ -340,10 +352,12 @@ const Gallery = () => {
 
             // 5초 후 토스트 자동 닫기
             setTimeout(() => {
+                console.log('[Gallery] Auto-closing upload state');
                 setUploadState(null);
             }, 5000);
         }).catch(error => {
-            console.error('Upload failed:', error);
+            console.error('[Gallery] Upload failed with error:', error);
+            console.error('[Gallery] Error stack:', error.stack);
             setUploadState(prev => prev ? {
                 ...prev,
                 error: error.message,
@@ -356,6 +370,16 @@ const Gallery = () => {
                 setUploadState(null);
             }, 5000);
         });
+        } catch (syncError) {
+            console.error('[Gallery] Synchronous error in uploadFn:', syncError);
+            console.error('[Gallery] Sync error stack:', syncError.stack);
+            setUploadState(prev => prev ? {
+                ...prev,
+                error: `동기 에러: ${syncError.message}`,
+                done: true,
+                failed: prev.total
+            } : null);
+        }
     };
 
     // Web Share API - 모바일에서 사진/동영상 공유

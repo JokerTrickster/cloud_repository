@@ -160,13 +160,14 @@ const fileApi = {
 
     // Handle multipart uploads (sequential to avoid overwhelming the system)
     for (const { file, index } of multipartFiles) {
-      console.log(`[Batch Upload] Processing multipart upload ${index + 1}/${files.length}: ${file.name}`);
+      console.log(`[Batch Upload] Processing multipart upload ${index + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024 / 1024).toFixed(2)}GB)`);
 
       if (onProgress) {
         onProgress(index, 0, 'uploading');
       }
 
       try {
+        console.log(`[Batch Upload] Calling multipartUploadApi.uploadFile for ${file.name}...`);
         const result = await multipartUploadApi.uploadFile(
           file,
           (completedParts, totalParts, percentage) => {
