@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, Plus, MoreVertical, Edit2, Trash2, FolderPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, Plus, MoreVertical, Edit2, Trash2, FolderPlus, X } from 'lucide-react';
 
 /**
  * FolderSidebar - 계층적 폴더 구조 표시 및 관리
@@ -11,6 +11,8 @@ import { Folder, FolderOpen, ChevronRight, ChevronDown, Plus, MoreVertical, Edit
  * @param {Function} onRenameFolder - 폴더 이름 변경 콜백
  * @param {Function} onDeleteFolder - 폴더 삭제 콜백
  * @param {Function} onMoveFolder - 폴더 이동 콜백
+ * @param {boolean} isOpen - 모바일에서 사이드바 열림 상태
+ * @param {Function} onClose - 모바일에서 사이드바 닫기 콜백
  */
 const FolderSidebar = ({
   folders = [],
@@ -19,10 +21,25 @@ const FolderSidebar = ({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
-  onMoveFolder
+  onMoveFolder,
+  isOpen = true,
+  onClose
 }) => {
   const [expandedFolders, setExpandedFolders] = useState(new Set());
   const [contextMenu, setContextMenu] = useState(null); // { folderId, x, y }
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 폴더 확장/축소 토글
   const toggleFolder = (folderId) => {
@@ -63,7 +80,7 @@ const FolderSidebar = ({
       <div key={folder.id} style={{ userSelect: 'none' }}>
         {/* 폴더 아이템 */}
         <div
-          onClick={() => onFolderSelect(folder)}
+          onClick={() => handleFolderClick(folder)}
           onContextMenu={(e) => handleContextMenu(e, folder)}
           style={{
             display: 'flex',
@@ -140,16 +157,50 @@ const FolderSidebar = ({
     );
   };
 
+  // Handle folder selection for mobile (auto-close sidebar)
+  const handleFolderClick = (folder) => {
+    onFolderSelect(folder);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div style={{
-      width: '280px',
-      height: '100%',
-      background: 'var(--surface)',
-      borderRight: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    }}>
+    <>
+      {/* Backdrop for mobile */}
+      {isMobile && isOpen && (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 998,
+            animation: 'fadeIn 0.3s ease'
+          }}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div style={{
+        position: isMobile ? 'fixed' : 'relative',
+        top: isMobile ? 0 : 'auto',
+        left: isMobile ? (isOpen ? 0 : '-100%') : 'auto',
+        width: isMobile ? '85%' : '280px',
+        maxWidth: isMobile ? '320px' : 'none',
+        height: '100%',
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        zIndex: isMobile ? 999 : 'auto',
+        transition: 'left 0.3s ease',
+        boxShadow: isMobile ? '2px 0 8px rgba(0,0,0,0.1)' : 'none'
+      }}>
       {/* 헤더 */}
       <div style={{
         padding: '16px',
@@ -158,7 +209,25 @@ const FolderSidebar = ({
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>폴더</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>폴더</h3>
+          {isMobile && onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
         <button
           onClick={() => onCreateFolder(null)}
           style={{
@@ -166,7 +235,7 @@ const FolderSidebar = ({
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-sm)',
-            padding: '6px 12px',
+            padding: isMobile ? '8px' : '6px 12px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -177,13 +246,13 @@ const FolderSidebar = ({
           title="새 폴더"
         >
           <Plus size={16} />
-          폴더
+          {!isMobile && '폴더'}
         </button>
       </div>
 
       {/* 루트 폴더 (전체 파일) */}
       <div
-        onClick={() => onFolderSelect(null)}
+        onClick={() => handleFolderClick(null)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -332,7 +401,24 @@ const FolderSidebar = ({
           </div>
         </>
       )}
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+          /* Increase touch targets for mobile */
+          button {
+            min-height: 44px;
+            min-width: 44px;
+          }
+        }
+      `}</style>
     </div>
+    </>
   );
 };
 

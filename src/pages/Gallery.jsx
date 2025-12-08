@@ -48,6 +48,7 @@ const Gallery = () => {
     const [showMoveFiles, setShowMoveFiles] = useState(false);
     const [editingFolder, setEditingFolder] = useState(null);
     const [createFolderParentId, setCreateFolderParentId] = useState(null);
+    const [isFolderSidebarOpen, setIsFolderSidebarOpen] = useState(false); // Mobile sidebar state
 
     // Load files from API
     useEffect(() => {
@@ -611,10 +612,21 @@ const Gallery = () => {
                 onCreateFolder={handleCreateFolder}
                 onRenameFolder={handleRenameFolder}
                 onDeleteFolder={handleDeleteFolder}
+                isOpen={isFolderSidebarOpen}
+                onClose={() => setIsFolderSidebarOpen(false)}
             />
 
             {/* Main Gallery Content */}
-            <div style={{ flex: 1, padding: '16px', height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: '80px', overflow: 'auto' }}>
+            <div style={{
+                flex: 1,
+                padding: '16px',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                paddingBottom: '80px',
+                overflow: 'auto',
+                width: '100%' // Ensure full width on mobile
+            }}>
             <style>{`
                 .gallery-grid {
                     display: grid;
@@ -706,6 +718,8 @@ const Gallery = () => {
                         onUploadClick={() => setShowUpload(true)}
                         onSelectionModeToggle={() => setIsSelectionMode(true)}
                         isSelectionMode={isSelectionMode}
+                        onFolderMenuClick={() => setIsFolderSidebarOpen(true)}
+                        currentFolder={currentFolder}
                     />
                     {showCalendar && (
                         <DateRangeCalendar

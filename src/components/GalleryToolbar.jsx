@@ -1,5 +1,5 @@
-import React from 'react';
-import { CalendarIcon, X, UploadIcon, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CalendarIcon, X, UploadIcon, Check, Menu, Folder } from 'lucide-react';
 import { format } from 'date-fns';
 
 const GalleryToolbar = ({
@@ -11,11 +11,49 @@ const GalleryToolbar = ({
     showCalendar,
     onUploadClick,
     onSelectionModeToggle,
-    isSelectionMode
+    isSelectionMode,
+    onFolderMenuClick,
+    currentFolder
 }) => {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     return (
         <div className="gallery-toolbar">
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {/* Hamburger Menu for Mobile */}
+                {isMobile && (
+                    <button
+                        onClick={onFolderMenuClick}
+                        style={{
+                            padding: '8px',
+                            background: currentFolder ? 'rgba(26, 115, 232, 0.1)' : 'var(--surface)',
+                            color: currentFolder ? 'var(--primary)' : 'var(--text-secondary)',
+                            border: currentFolder ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            borderRadius: 'var(--radius-full)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '13px',
+                            fontWeight: '500'
+                        }}
+                        title="폴더 메뉴"
+                    >
+                        {currentFolder ? <Folder size={16} /> : <Menu size={16} />}
+                    </button>
+                )}
+
                 {/* Date Range Filter */}
                 <div style={{ position: 'relative' }}>
                     <button
