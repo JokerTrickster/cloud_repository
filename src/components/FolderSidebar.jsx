@@ -146,6 +146,31 @@ const FolderSidebar = ({
           }}>
             {folder.file_count}
           </span>
+
+          {/* 모바일 더보기 버튼 */}
+          {isMobile && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleContextMenu(e, folder);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                marginLeft: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                color: 'var(--text-secondary)',
+                minWidth: '44px',
+                minHeight: '44px',
+                justifyContent: 'center'
+              }}
+            >
+              <MoreVertical size={18} />
+            </button>
+          )}
         </div>
 
         {/* 하위 폴더들 (재귀 렌더링) */}
@@ -323,14 +348,22 @@ const FolderSidebar = ({
             <div
               style={{
                 position: 'fixed',
-                top: contextMenu.y,
-                left: contextMenu.x,
+                // 모바일: 하단 고정, 데스크탑: 클릭 위치
+                ...(isMobile ? {
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0'
+                } : {
+                  top: contextMenu.y,
+                  left: contextMenu.x,
+                  borderRadius: 'var(--radius-md)'
+                }),
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-md)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 zIndex: 1000,
-                minWidth: '180px',
+                minWidth: isMobile ? 'auto' : '180px',
                 overflow: 'hidden'
               }}
             >
@@ -340,18 +373,19 @@ const FolderSidebar = ({
                   closeContextMenu();
                 }}
                 style={{
-                  padding: '10px 16px',
+                  padding: isMobile ? '16px 20px' : '10px 16px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  transition: 'background 0.2s'
+                  gap: '12px',
+                  fontSize: isMobile ? '16px' : '14px',
+                  transition: 'background 0.2s',
+                  minHeight: isMobile ? '56px' : 'auto'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Plus size={16} />
+                <Plus size={isMobile ? 20 : 16} />
                 하위 폴더 생성
               </div>
 
@@ -361,18 +395,19 @@ const FolderSidebar = ({
                   closeContextMenu();
                 }}
                 style={{
-                  padding: '10px 16px',
+                  padding: isMobile ? '16px 20px' : '10px 16px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  transition: 'background 0.2s'
+                  gap: '12px',
+                  fontSize: isMobile ? '16px' : '14px',
+                  transition: 'background 0.2s',
+                  minHeight: isMobile ? '56px' : 'auto'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Edit2 size={16} />
+                <Edit2 size={isMobile ? 20 : 16} />
                 이름 변경
               </div>
 
@@ -403,19 +438,21 @@ const FolderSidebar = ({
                   closeContextMenu();
                 }}
                 style={{
-                  padding: '10px 16px',
+                  padding: isMobile ? '16px 20px' : '10px 16px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
+                  gap: '12px',
+                  fontSize: isMobile ? '16px' : '14px',
                   color: 'var(--accent)',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s',
+                  minHeight: isMobile ? '56px' : 'auto',
+                  borderTop: isMobile ? '1px solid var(--border)' : 'none'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Trash2 size={16} />
+                <Trash2 size={isMobile ? 20 : 16} />
                 삭제
               </div>
             </div>
