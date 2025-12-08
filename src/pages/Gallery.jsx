@@ -636,6 +636,27 @@ const Gallery = () => {
             setIsSelectionMode(false);
             loadFiles(); // Reload files
             loadFolders(); // Update folder file counts
+
+            // Auto-navigate to target folder after move
+            if (targetFolderId === null) {
+                setCurrentFolder(null); // Move to root
+            } else {
+                // Find the target folder object
+                const findFolder = (folders, id) => {
+                    for (const folder of folders) {
+                        if (folder.id === id) return folder;
+                        if (folder.sub_folders) {
+                            const found = findFolder(folder.sub_folders, id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const targetFolder = findFolder(folders, targetFolderId);
+                if (targetFolder) {
+                    setCurrentFolder(targetFolder);
+                }
+            }
         } catch (err) {
             console.error('[Gallery] Move files failed:', err);
 
