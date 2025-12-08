@@ -15,6 +15,13 @@ const MoveFilesModal = ({
   onClose,
   onMove
 }) => {
+  console.log('[MoveFilesModal] Component mounted:', {
+    selectedFilesCount: selectedFiles?.length,
+    foldersCount: folders?.length,
+    hasOnMove: !!onMove,
+    hasOnClose: !!onClose
+  });
+
   const [expandedFolders, setExpandedFolders] = useState(new Set());
   const [selectedFolder, setSelectedFolder] = useState(null); // null = 루트
   const [isMoving, setIsMoving] = useState(false);
