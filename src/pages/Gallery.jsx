@@ -514,8 +514,8 @@ const Gallery = () => {
     // Filter files by current folder
     const folderFilteredFiles = useMemo(() => {
         if (currentFolder === null) {
-            // Show all files when no folder selected
-            return filteredFiles;
+            // Show files without folder (root files) or all files if folder_id doesn't exist
+            return filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
         }
         // Show only files in current folder
         return filteredFiles.filter(file => file.folder_id === currentFolder.id);
