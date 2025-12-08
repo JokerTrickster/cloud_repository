@@ -644,10 +644,18 @@ const Gallery = () => {
     };
 
     const handleMoveFilesToFolder = () => {
+        console.log('[Gallery] handleMoveFilesToFolder called:', {
+            selectedFilesCount: selectedFiles.length,
+            selectedFileIds: selectedFiles
+        });
+
         if (selectedFiles.length === 0) {
+            console.log('[Gallery] No files selected, showing alert');
             alert('이동할 파일을 선택하세요.');
             return;
         }
+
+        console.log('[Gallery] Opening move files modal');
         setShowMoveFiles(true);
     };
 
