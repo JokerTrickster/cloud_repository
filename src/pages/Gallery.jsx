@@ -329,65 +329,65 @@ const Gallery = () => {
         // 백그라운드에서 업로드 실행
         try {
             uploadFn(
-            (fileIndex, progress, status) => {
-                // BUG FIX #1: Upload Progress Race Condition
-                // Use functional update to avoid state collision during concurrent uploads
-                setUploadState(prev => {
-                    // Defensive: return null if state is cleared during upload
-                    if (!prev) return null;
+                (fileIndex, progress, status) => {
+                    // BUG FIX #1: Upload Progress Race Condition
+                    // Use functional update to avoid state collision during concurrent uploads
+                    setUploadState(prev => {
+                        // Defensive: return null if state is cleared during upload
+                        if (!prev) return null;
 
-                    // Atomic update: ensure progress object is immutable
-                    const newProgress = { ...prev.progress, [fileIndex]: progress };
-                    const completedCount = Object.values(newProgress).filter(p => p === 100).length;
+                        // Atomic update: ensure progress object is immutable
+                        const newProgress = { ...prev.progress, [fileIndex]: progress };
+                        const completedCount = Object.values(newProgress).filter(p => p === 100).length;
 
-                    console.log(`[Gallery] Upload progress - File ${fileIndex}: ${progress}% (${status})`);
+                        console.log(`[Gallery] Upload progress - File ${fileIndex}: ${progress}% (${status})`);
 
-                    return {
-                        ...prev,
-                        progress: newProgress,
-                        completed: completedCount
-                    };
-                });
-            }
-        ).then(results => {
-            console.log('[Gallery] Upload completed, results:', results);
+                        return {
+                            ...prev,
+                            progress: newProgress,
+                            completed: completedCount
+                        };
+                    });
+                }
+            ).then(results => {
+                console.log('[Gallery] Upload completed, results:', results);
 
-            // 업로드 완료
-            const successCount = results.filter(r => r.file_id).length;
-            const failedCount = results.filter(r => !r.file_id).length;
+                // 업로드 완료
+                const successCount = results.filter(r => r.file_id).length;
+                const failedCount = results.filter(r => !r.file_id).length;
 
-            console.log(`[Gallery] Success: ${successCount}, Failed: ${failedCount}`);
+                console.log(`[Gallery] Success: ${successCount}, Failed: ${failedCount}`);
 
-            setUploadState(prev => prev ? {
-                ...prev,
-                completed: successCount,
-                failed: failedCount,
-                done: true
-            } : null);
+                setUploadState(prev => prev ? {
+                    ...prev,
+                    completed: successCount,
+                    failed: failedCount,
+                    done: true
+                } : null);
 
-            // 갤러리 새로고침
-            loadFiles();
+                // 갤러리 새로고침
+                loadFiles();
 
-            // 5초 후 토스트 자동 닫기
-            setTimeout(() => {
-                console.log('[Gallery] Auto-closing upload state');
-                setUploadState(null);
-            }, 5000);
-        }).catch(error => {
-            console.error('[Gallery] Upload failed with error:', error);
-            console.error('[Gallery] Error stack:', error.stack);
-            setUploadState(prev => prev ? {
-                ...prev,
-                error: error.message,
-                done: true,
-                failed: prev.total
-            } : null);
+                // 5초 후 토스트 자동 닫기
+                setTimeout(() => {
+                    console.log('[Gallery] Auto-closing upload state');
+                    setUploadState(null);
+                }, 5000);
+            }).catch(error => {
+                console.error('[Gallery] Upload failed with error:', error);
+                console.error('[Gallery] Error stack:', error.stack);
+                setUploadState(prev => prev ? {
+                    ...prev,
+                    error: error.message,
+                    done: true,
+                    failed: prev.total
+                } : null);
 
-            // 에러 시에도 5초 후 닫기
-            setTimeout(() => {
-                setUploadState(null);
-            }, 5000);
-        });
+                // 에러 시에도 5초 후 닫기
+                setTimeout(() => {
+                    setUploadState(null);
+                }, 5000);
+            });
         } catch (syncError) {
             console.error('[Gallery] Synchronous error in uploadFn:', syncError);
             console.error('[Gallery] Sync error stack:', syncError.stack);
@@ -509,7 +509,7 @@ const Gallery = () => {
     const loadFolders = async () => {
         try {
             const folderData = await folderApi.getFolders();
-            setFolders(folderData);
+            setFolders(folderData || []);
         } catch (err) {
             console.error('[Gallery] Failed to load folders:', err);
         }
@@ -639,7 +639,7 @@ const Gallery = () => {
                 overflow: 'auto',
                 width: '100%' // Ensure full width on mobile
             }}>
-            <style>{`
+                <style>{`
                 .gallery-grid {
                     display: grid;
                     grid-template-columns: repeat(5, 1fr);
@@ -691,286 +691,286 @@ const Gallery = () => {
         }
       `}</style>
 
-            {/* Header Controls */}
-            <div style={{ marginBottom: '16px', flexShrink: 0 }}>
-                <GallerySearchBar
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                />
-
-                {/* Filter Tabs */}
-                <GalleryFilters
-                    filterType={filterType}
-                    onFilterChange={setFilterType}
-                    favoriteOnly={favoriteOnly}
-                    onFavoriteToggle={() => setFavoriteOnly(!favoriteOnly)}
-                />
-
-                {/* Tag Filter Bar */}
-                <TagFilterBar
-                    tags={tags}
-                    searchTerm={searchTerm}
-                    onTagClick={(tag) => setSearchTerm(searchTerm === `#${tag}` ? '' : `#${tag}`)}
-                    onTagRemove={(tag) => {
-                        setTags(tags.filter(t => t !== tag));
-                        if (searchTerm === `#${tag}`) setSearchTerm('');
-                    }}
-                    onTagAdd={(tag) => setTags([...tags, tag])}
-                />
-
-                {/* Toolbar with Calendar */}
-                <div style={{ position: 'relative' }}>
-                    <GalleryToolbar
-                        sortOption={sortOption}
-                        onSortChange={setSortOption}
-                        dateRange={dateRange}
-                        onDateRangeButtonClick={() => setShowCalendar(!showCalendar)}
-                        onDateRangeClear={() => setDateRange({ start: null, end: null })}
-                        showCalendar={showCalendar}
-                        onUploadClick={() => setShowUpload(true)}
-                        onSelectionModeToggle={() => setIsSelectionMode(true)}
-                        isSelectionMode={isSelectionMode}
-                        onFolderMenuClick={() => setIsFolderSidebarOpen(true)}
-                        currentFolder={currentFolder}
+                {/* Header Controls */}
+                <div style={{ marginBottom: '16px', flexShrink: 0 }}>
+                    <GallerySearchBar
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
                     />
-                    {showCalendar && (
-                        <DateRangeCalendar
-                            currentMonth={currentMonth}
-                            onMonthChange={setCurrentMonth}
+
+                    {/* Filter Tabs */}
+                    <GalleryFilters
+                        filterType={filterType}
+                        onFilterChange={setFilterType}
+                        favoriteOnly={favoriteOnly}
+                        onFavoriteToggle={() => setFavoriteOnly(!favoriteOnly)}
+                    />
+
+                    {/* Tag Filter Bar */}
+                    <TagFilterBar
+                        tags={tags}
+                        searchTerm={searchTerm}
+                        onTagClick={(tag) => setSearchTerm(searchTerm === `#${tag}` ? '' : `#${tag}`)}
+                        onTagRemove={(tag) => {
+                            setTags(tags.filter(t => t !== tag));
+                            if (searchTerm === `#${tag}`) setSearchTerm('');
+                        }}
+                        onTagAdd={(tag) => setTags([...tags, tag])}
+                    />
+
+                    {/* Toolbar with Calendar */}
+                    <div style={{ position: 'relative' }}>
+                        <GalleryToolbar
+                            sortOption={sortOption}
+                            onSortChange={setSortOption}
                             dateRange={dateRange}
-                            onDateSelect={handleDateRangeSelect}
-                            onClear={() => { setDateRange({ start: null, end: null }); setShowCalendar(false); }}
+                            onDateRangeButtonClick={() => setShowCalendar(!showCalendar)}
+                            onDateRangeClear={() => setDateRange({ start: null, end: null })}
+                            showCalendar={showCalendar}
+                            onUploadClick={() => setShowUpload(true)}
+                            onSelectionModeToggle={() => setIsSelectionMode(true)}
+                            isSelectionMode={isSelectionMode}
+                            onFolderMenuClick={() => setIsFolderSidebarOpen(true)}
+                            currentFolder={currentFolder}
                         />
-                    )}
-                </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-                <div style={{
-                    padding: '12px',
-                    background: '#FEE2E2',
-                    border: '1px solid #FCA5A5',
-                    borderRadius: 'var(--radius-sm)',
-                    color: '#DC2626',
-                    marginBottom: '16px',
-                    fontSize: '14px'
-                }}>
-                    {error}
-                </div>
-            )}
-
-            {/* Gallery Grid */}
-            <GalleryGrid
-                loading={loading}
-                files={files}
-                groupedFiles={finalGroupedFiles}
-                filteredFiles={filteredFiles}
-                isSelectionMode={isSelectionMode}
-                selectedFiles={selectedFiles}
-                searchTerm={searchTerm}
-                onToggleSelection={toggleSelection}
-                onImageLoad={handleImageLoad}
-                onOpenOptions={setOptionsModalFile}
-                onShowUpload={() => setShowUpload(true)}
-                onToggleFavorite={handleToggleFavorite}
-                uploadState={uploadState}
-            />
-
-            {/* File Upload Modal */}
-            {showUpload && (
-                <FileUpload
-                    onUploadStart={handleUploadStart}
-                    onClose={() => setShowUpload(false)}
-                />
-            )}
-
-            {/* Selection Action Bar */}
-            {isSelectionMode && (
-                <SelectionActionBar
-                    selectedCount={selectedFiles.length}
-                    onCancel={() => { setIsSelectionMode(false); setSelectedFiles([]); }}
-                    onDownload={handleDownload}
-                    onDelete={handleDelete}
-                    onMoveToFolder={handleMoveFilesToFolder}
-                />
-            )}
-
-            {/* Video Player Modal */}
-            <VideoPlayerModal
-                video={playingVideo}
-                onClose={() => setPlayingVideo(null)}
-                onShare={handleShare}
-                onDownload={handleDownloadFile}
-            />
-
-            {/* Image Viewer Modal */}
-            <ImageViewerModal
-                image={viewingImage}
-                onClose={() => setViewingImage(null)}
-                onShare={handleShare}
-                onDownload={handleDownloadFile}
-            />
-
-            {/* Upload Progress Toast */}
-            {/* Fixed Upload Progress Bar at Bottom */}
-            {uploadState && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'var(--surface)',
-                    borderTop: '1px solid var(--border)',
-                    padding: '16px 24px',
-                    boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
-                    zIndex: 1000
-                }}>
-                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <div>
-                                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                    {uploadState.done ? '업로드 완료' : '파일 업로드 중...'}
-                                </span>
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
-                                    {uploadState.completed}/{uploadState.total} 파일
-                                    {uploadState.failed > 0 && ` (실패: ${uploadState.failed})`}
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => setUploadState(null)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '4px',
-                                    color: 'var(--text-tertiary)'
-                                }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        {/* Warning Message */}
-                        {!uploadState.done && (
-                            <div style={{
-                                marginBottom: '12px',
-                                padding: '8px 12px',
-                                background: '#FFF3E0',
-                                border: '1px solid #FFE0B2',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                color: '#E65100',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}>
-                                <span>⚠️</span>
-                                <span>업로드 중에는 화면을 끄거나 페이지를 벗어나지 마세요.</span>
-                            </div>
+                        {showCalendar && (
+                            <DateRangeCalendar
+                                currentMonth={currentMonth}
+                                onMonthChange={setCurrentMonth}
+                                dateRange={dateRange}
+                                onDateSelect={handleDateRangeSelect}
+                                onClear={() => { setDateRange({ start: null, end: null }); setShowCalendar(false); }}
+                            />
                         )}
-                        {/* Individual File Progress */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {uploadState.files.map((file, index) => {
-                                const progress = uploadState.progress[index] || 0;
-                                const isComplete = progress === 100;
-                                return (
-                                    <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{
-                                            flex: 1,
-                                            fontSize: '13px',
-                                            color: 'var(--text-secondary)',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                            minWidth: 0
-                                        }}>
-                                            {file.name}
-                                        </div>
-                                        <div style={{
-                                            flex: 2,
-                                            position: 'relative',
-                                            height: '6px',
-                                            background: 'var(--background)',
-                                            borderRadius: '3px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                height: '100%',
-                                                width: `${progress}%`,
-                                                background: isComplete ? '#4CAF50' : 'var(--primary)',
-                                                transition: 'width 0.3s ease',
-                                                borderRadius: '3px'
-                                            }} />
-                                        </div>
-                                        <div style={{
-                                            width: '50px',
-                                            textAlign: 'right',
-                                            fontSize: '13px',
-                                            fontWeight: '500',
-                                            color: isComplete ? '#4CAF50' : 'var(--text-primary)'
-                                        }}>
-                                            {progress}%
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
                     </div>
                 </div>
-            )}
-            {/* Tag Edit Modal */}
-            {editingFile && (
-                <TagEditModal
-                    file={editingFile}
-                    onClose={() => setEditingFile(null)}
-                    onUpdate={handleTagUpdate}
-                />
-            )}
 
-            {optionsModalFile && (
-                <OptionsModal
-                    file={optionsModalFile}
-                    onClose={() => setOptionsModalFile(null)}
-                    onTagEdit={(file) => {
-                        setOptionsModalFile(null);
-                        setEditingFile(file);
-                    }}
-                    onToggleFavorite={(fileId, isFavorite) => {
-                        handleToggleFavorite(fileId, isFavorite);
-                    }}
-                />
-            )}
+                {/* Error Message */}
+                {error && (
+                    <div style={{
+                        padding: '12px',
+                        background: '#FEE2E2',
+                        border: '1px solid #FCA5A5',
+                        borderRadius: 'var(--radius-sm)',
+                        color: '#DC2626',
+                        marginBottom: '16px',
+                        fontSize: '14px'
+                    }}>
+                        {error}
+                    </div>
+                )}
 
-            {/* Folder Modals */}
-            {showCreateFolder && (
-                <CreateFolderModal
-                    onClose={() => {
-                        setShowCreateFolder(false);
-                        setEditingFolder(null);
-                        setCreateFolderParentId(null);
-                    }}
-                    onSubmit={handleFolderSubmit}
-                    editingFolder={editingFolder}
-                    defaultParentId={createFolderParentId}
+                {/* Gallery Grid */}
+                <GalleryGrid
+                    loading={loading}
+                    files={files}
+                    groupedFiles={finalGroupedFiles}
+                    filteredFiles={filteredFiles}
+                    isSelectionMode={isSelectionMode}
+                    selectedFiles={selectedFiles}
+                    searchTerm={searchTerm}
+                    onToggleSelection={toggleSelection}
+                    onImageLoad={handleImageLoad}
+                    onOpenOptions={setOptionsModalFile}
+                    onShowUpload={() => setShowUpload(true)}
+                    onToggleFavorite={handleToggleFavorite}
+                    uploadState={uploadState}
                 />
-            )}
 
-            {showMoveFiles && (
-                <MoveFilesModal
-                    selectedFiles={files.filter(f => selectedFiles.includes(f.id))}
-                    folders={folders}
-                    onClose={() => setShowMoveFiles(false)}
-                    onMove={handleMoveFiles}
+                {/* File Upload Modal */}
+                {showUpload && (
+                    <FileUpload
+                        onUploadStart={handleUploadStart}
+                        onClose={() => setShowUpload(false)}
+                    />
+                )}
+
+                {/* Selection Action Bar */}
+                {isSelectionMode && (
+                    <SelectionActionBar
+                        selectedCount={selectedFiles.length}
+                        onCancel={() => { setIsSelectionMode(false); setSelectedFiles([]); }}
+                        onDownload={handleDownload}
+                        onDelete={handleDelete}
+                        onMoveToFolder={handleMoveFilesToFolder}
+                    />
+                )}
+
+                {/* Video Player Modal */}
+                <VideoPlayerModal
+                    video={playingVideo}
+                    onClose={() => setPlayingVideo(null)}
+                    onShare={handleShare}
+                    onDownload={handleDownloadFile}
                 />
-            )}
 
-            {/* Debug Logger for mobile debugging */}
-            <DebugLogger />
-        </div>
+                {/* Image Viewer Modal */}
+                <ImageViewerModal
+                    image={viewingImage}
+                    onClose={() => setViewingImage(null)}
+                    onShare={handleShare}
+                    onDownload={handleDownloadFile}
+                />
+
+                {/* Upload Progress Toast */}
+                {/* Fixed Upload Progress Bar at Bottom */}
+                {uploadState && (
+                    <div style={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'var(--surface)',
+                        borderTop: '1px solid var(--border)',
+                        padding: '16px 24px',
+                        boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+                        zIndex: 1000
+                    }}>
+                        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <div>
+                                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                        {uploadState.done ? '업로드 완료' : '파일 업로드 중...'}
+                                    </span>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
+                                        {uploadState.completed}/{uploadState.total} 파일
+                                        {uploadState.failed > 0 && ` (실패: ${uploadState.failed})`}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => setUploadState(null)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        color: 'var(--text-tertiary)'
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Warning Message */}
+                            {!uploadState.done && (
+                                <div style={{
+                                    marginBottom: '12px',
+                                    padding: '8px 12px',
+                                    background: '#FFF3E0',
+                                    border: '1px solid #FFE0B2',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    color: '#E65100',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    <span>⚠️</span>
+                                    <span>업로드 중에는 화면을 끄거나 페이지를 벗어나지 마세요.</span>
+                                </div>
+                            )}
+                            {/* Individual File Progress */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {uploadState.files.map((file, index) => {
+                                    const progress = uploadState.progress[index] || 0;
+                                    const isComplete = progress === 100;
+                                    return (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{
+                                                flex: 1,
+                                                fontSize: '13px',
+                                                color: 'var(--text-secondary)',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                                minWidth: 0
+                                            }}>
+                                                {file.name}
+                                            </div>
+                                            <div style={{
+                                                flex: 2,
+                                                position: 'relative',
+                                                height: '6px',
+                                                background: 'var(--background)',
+                                                borderRadius: '3px',
+                                                overflow: 'hidden'
+                                            }}>
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    height: '100%',
+                                                    width: `${progress}%`,
+                                                    background: isComplete ? '#4CAF50' : 'var(--primary)',
+                                                    transition: 'width 0.3s ease',
+                                                    borderRadius: '3px'
+                                                }} />
+                                            </div>
+                                            <div style={{
+                                                width: '50px',
+                                                textAlign: 'right',
+                                                fontSize: '13px',
+                                                fontWeight: '500',
+                                                color: isComplete ? '#4CAF50' : 'var(--text-primary)'
+                                            }}>
+                                                {progress}%
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {/* Tag Edit Modal */}
+                {editingFile && (
+                    <TagEditModal
+                        file={editingFile}
+                        onClose={() => setEditingFile(null)}
+                        onUpdate={handleTagUpdate}
+                    />
+                )}
+
+                {optionsModalFile && (
+                    <OptionsModal
+                        file={optionsModalFile}
+                        onClose={() => setOptionsModalFile(null)}
+                        onTagEdit={(file) => {
+                            setOptionsModalFile(null);
+                            setEditingFile(file);
+                        }}
+                        onToggleFavorite={(fileId, isFavorite) => {
+                            handleToggleFavorite(fileId, isFavorite);
+                        }}
+                    />
+                )}
+
+                {/* Folder Modals */}
+                {showCreateFolder && (
+                    <CreateFolderModal
+                        onClose={() => {
+                            setShowCreateFolder(false);
+                            setEditingFolder(null);
+                            setCreateFolderParentId(null);
+                        }}
+                        onSubmit={handleFolderSubmit}
+                        editingFolder={editingFolder}
+                        defaultParentId={createFolderParentId}
+                    />
+                )}
+
+                {showMoveFiles && (
+                    <MoveFilesModal
+                        selectedFiles={files.filter(f => selectedFiles.includes(f.id))}
+                        folders={folders}
+                        onClose={() => setShowMoveFiles(false)}
+                        onMove={handleMoveFiles}
+                    />
+                )}
+
+                {/* Debug Logger for mobile debugging */}
+                <DebugLogger />
+            </div>
         </div>
     );
 };

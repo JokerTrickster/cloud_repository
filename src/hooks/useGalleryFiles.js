@@ -70,7 +70,16 @@ export const useGalleryFiles = () => {
                 const result = await fileApi.getFiles(params);
 
                 // Transform API response to match frontend structure
-                transformedFiles = result.files.map(file => transformFileData(file, false, favoriteFileIds));
+                // Handle various API response structures: { files: [] }, { data: [] }, or []
+                const rawFiles = result.files || result.data || (Array.isArray(result) ? result : []);
+
+                if (!rawFiles) {
+                    console.warn('[Gallery] Unexpected API response format:', result);
+                }
+
+                transformedFiles = (rawFiles || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
+
+                console.log(`[Gallery] Loaded ${transformedFiles.length} files`);
             }
 
             setFiles(transformedFiles);
@@ -87,7 +96,9 @@ export const useGalleryFiles = () => {
             // Extract unique tags
             const allTags = new Set();
             transformedFiles.forEach(file => {
-                file.tags.forEach(tag => allTags.add(tag));
+                if (file && file.tags) {
+                    file.tags.forEach(tag => allTags.add(tag));
+                }
             });
             setTags(Array.from(allTags).slice(0, 5));
 
@@ -141,6 +152,8 @@ export const useGalleryFiles = () => {
 
 // Helper function to transform file data
 function transformFileData(file, isFavoriteList, favoriteFileIds) {
+    if (!file) return null;
+
     const fileType = (file.content_type || file.contentType || file.file_type || '').startsWith('image/') ? 'image' : 'video';
     const thumbUrl = file.thumbnail_url || file.thumbnailUrl;
     const isVideoProcessing = fileType === 'video' &&
@@ -175,14 +188,14 @@ function transformFileData(file, isFavoriteList, favoriteFileIds) {
 
     return {
         id: file.id,
-        name: file.file_name || file.fileName,
+        name: file.file_name || file.fileName || 'Unknown',
         url: thumbnailUrl,
         originalUrl: file.download_url || file.downloadUrl || file.url,
         type: fileType,
-        date: format(parseISO(file.created_at || file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd'),
+        date: file.created_at || file.uploadedAt || file.uploaded_at ? format(parseISO(file.created_at || file.uploadedAt || file.uploaded_at), 'yyyy-MM-dd') : '',
         tags: file.tags ? file.tags.map(t => t.name || t) : [],
         duration: file.duration || null,
-        size: file.file_size || file.fileSize,
+        size: file.file_size || file.fileSize || 0,
         created_at: file.created_at || file.uploadedAt || file.uploaded_at,
         folder_id: file.folder_id || null, // Include folder_id for folder filtering
         isFavorite: isFavoriteList ? true : (favoriteFileIds.has(file.id) || file.is_favorite || false),

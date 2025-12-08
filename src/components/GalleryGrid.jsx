@@ -212,9 +212,11 @@ const GalleryGrid = ({
                         {format(parseISO(date), 'yyyy년 M월 d일', { locale: ko })}
                     </h3>
                     <div className="gallery-grid">
-                        {dateFiles.map((file) => {
+                        {dateFiles && dateFiles.map((file) => {
                             // Calculate absolute index across all files for fetchpriority
-                            const absoluteIndex = filteredFiles.findIndex(f => f.id === file.id);
+                            const absoluteIndex = filteredFiles && Array.isArray(filteredFiles)
+                                ? filteredFiles.findIndex(f => f.id === file.id)
+                                : -1;
                             return (
                                 <GalleryItem
                                     key={file.id}
