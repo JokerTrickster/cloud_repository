@@ -61,12 +61,31 @@ export const useGalleryFiles = () => {
                 // Fetch files in specific folder
                 console.log(`[Gallery] Fetching files for folder: ${folderId}`);
                 const result = await folderApi.getFolderFiles(folderId);
+                console.log('[Gallery] Folder API raw response:', result);
 
                 // Handle response structure
                 const rawFiles = result.files || result.data || (Array.isArray(result) ? result : []);
+                console.log('[Gallery] Extracted raw files:', rawFiles?.length, rawFiles?.[0]);
+
+                // Folder API returns s3_key and thumbnail_key instead of URLs
+                // Need to convert to presigned URLs
+                const S3_BUCKET = 'joker-cloud-repository-dev';
+                const S3_REGION = 'ap-south-1';
+
+                const filesWithUrls = rawFiles.map(file => {
+                    if (!file.s3_key) return file;
+
+                    return {
+                        ...file,
+                        download_url: `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${file.s3_key}`,
+                        thumbnail_url: file.thumbnail_key
+                            ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${file.thumbnail_key}`
+                            : undefined
+                    };
+                });
 
                 // Transform first
-                let files = (rawFiles || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
+                let files = (filesWithUrls || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
 
                 // Client-side Filtering
                 if (filterType && filterType !== 'all') {
