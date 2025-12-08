@@ -25,14 +25,6 @@ const Gallery = () => {
     const location = useLocation();
     const { files, setFiles, loading, error, tags, setTags, loadFiles, handleImageLoad } = useGalleryFiles();
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Debug: Log files state changes
-    useEffect(() => {
-        console.log('[Gallery] files state changed, new length:', files?.length || 0);
-        if (files && files.length > 0) {
-            console.log('[Gallery] Sample file from state:', files[0]);
-        }
-    }, [files]);
     const [playingVideo, setPlayingVideo] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -238,28 +230,16 @@ const Gallery = () => {
 
     // Memoized Filter and Sort Logic (client-side filtering for search term only)
     const filteredFiles = useMemo(() => {
-        console.log('[Gallery] filteredFiles recalculating...');
-        console.log('[Gallery] files count:', files?.length || 0);
-        console.log('[Gallery] searchTerm:', searchTerm);
-
         if (!files || files.length === 0) {
-            console.log('[Gallery] No files to filter');
             return [];
         }
 
-        const filtered = files.filter(file => {
-            // Safety check for tags
+        return files.filter(file => {
             const fileTags = file.tags || [];
-
             const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 fileTags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase().replace('#', '')));
-
             return matchesSearch;
         });
-
-        console.log('[Gallery] filteredFiles result:', filtered.length, 'files');
-        console.log('[Gallery] Sample filtered file:', filtered[0]);
-        return filtered;
     }, [files, searchTerm]);
 
     // Memoized Grouping (kept for compatibility, but using finalGroupedFiles instead)
@@ -537,49 +517,30 @@ const Gallery = () => {
 
     // Filter files by current folder
     const folderFilteredFiles = useMemo(() => {
-        console.log('[Gallery] folderFilteredFiles recalculating...');
-        console.log('[Gallery] currentFolder:', currentFolder);
-        console.log('[Gallery] filteredFiles count:', filteredFiles?.length || 0);
-
         if (!filteredFiles || filteredFiles.length === 0) {
-            console.log('[Gallery] filteredFiles is empty or null');
             return [];
         }
 
         if (currentFolder === null) {
-            // Show files without folder (root files) or all files if folder_id doesn't exist
-            const rootFiles = filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
-            console.log('[Gallery] Root view - filtered', rootFiles.length, 'files without folder_id');
-            console.log('[Gallery] Sample file folder_id values:', filteredFiles.slice(0, 3).map(f => ({ name: f.name, folder_id: f.folder_id })));
-            return rootFiles;
+            // Show files without folder (root files)
+            return filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
         }
         // Show only files in current folder
-        const folderFiles = filteredFiles.filter(file => file.folder_id === currentFolder.id);
-        console.log('[Gallery] Folder view - filtered', folderFiles.length, 'files for folder', currentFolder.id);
-        return folderFiles;
+        return filteredFiles.filter(file => file.folder_id === currentFolder.id);
     }, [filteredFiles, currentFolder]);
 
     // Update groupedFiles to use folder-filtered files
     const finalGroupedFiles = useMemo(() => {
-        console.log('[Gallery] finalGroupedFiles recalculating...');
-        console.log('[Gallery] folderFilteredFiles count:', folderFilteredFiles?.length || 0);
-
         if (!folderFilteredFiles || folderFilteredFiles.length === 0) {
-            console.log('[Gallery] No filtered files, returning empty object');
             return {};
         }
 
-        const grouped = folderFilteredFiles.reduce((acc, file) => {
+        return folderFilteredFiles.reduce((acc, file) => {
             const date = file.date;
             if (!acc[date]) acc[date] = [];
             acc[date].push(file);
             return acc;
         }, {});
-
-        console.log('[Gallery] finalGroupedFiles created:', Object.keys(grouped).length, 'dates');
-        console.log('[Gallery] finalGroupedFiles dates:', Object.keys(grouped));
-        console.log('[Gallery] Total files in groups:', Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0));
-        return grouped;
     }, [folderFilteredFiles]);
 
     // Folder handlers

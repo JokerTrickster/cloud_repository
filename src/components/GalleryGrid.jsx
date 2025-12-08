@@ -19,12 +19,6 @@ const GalleryGrid = ({
     onToggleFavorite,
     uploadState
 }) => {
-    // Debug logging
-    console.log('[GalleryGrid] Render - loading:', loading);
-    console.log('[GalleryGrid] Render - files:', files?.length || 0);
-    console.log('[GalleryGrid] Render - groupedFiles:', groupedFiles ? Object.keys(groupedFiles).length : 0, 'dates');
-    console.log('[GalleryGrid] Render - filteredFiles:', filteredFiles?.length || 0);
-
     // Loading State
     if (loading) {
         return (
@@ -203,9 +197,7 @@ const GalleryGrid = ({
             )}
 
             {/* Existing Files by Date */}
-            {groupedFiles && Object.entries(groupedFiles).map(([date, dateFiles]) => {
-                console.log('[GalleryGrid] Rendering date group:', date, 'with', dateFiles?.length || 0, 'files');
-                return (
+            {groupedFiles && Object.entries(groupedFiles).map(([date, dateFiles]) => (
                 <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
                     <h3 style={{
                         fontSize: '14px',
@@ -240,8 +232,7 @@ const GalleryGrid = ({
                         })}
                     </div>
                 </div>
-                );
-            })}
+            ))}
         </div>
     );
 };

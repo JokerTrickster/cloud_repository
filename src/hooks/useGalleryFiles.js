@@ -15,8 +15,6 @@ export const useGalleryFiles = () => {
     const apiEndTime = useRef(0);
 
     const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly } = {}) => {
-        console.log('[useGalleryFiles] loadFiles called with params:', { dateRange, filterType, sortOption, favoriteOnly });
-
         setLoading(true);
         setError('');
 
@@ -71,25 +69,11 @@ export const useGalleryFiles = () => {
 
                 const result = await fileApi.getFiles(params);
 
-                console.log('[useGalleryFiles] API result:', result);
-                console.log('[useGalleryFiles] result.files length:', result.files?.length || 0);
-
                 // Transform API response to match frontend structure
                 transformedFiles = result.files.map(file => transformFileData(file, false, favoriteFileIds));
-
-                console.log('[useGalleryFiles] transformedFiles length:', transformedFiles.length);
-                console.log('[useGalleryFiles] Sample transformed file:', JSON.stringify(transformedFiles[0], null, 2));
             }
 
-            console.log('[useGalleryFiles] Setting files state with', transformedFiles.length, 'files');
-            console.log('[useGalleryFiles] About to call setFiles...');
             setFiles(transformedFiles);
-            console.log('[useGalleryFiles] setFiles called (synchronous part done)');
-
-            // Verify state was set
-            setTimeout(() => {
-                console.log('[useGalleryFiles] State verification - files should now be set');
-            }, 100);
 
             apiEndTime.current = performance.now();
             totalImagesToLoad.current = transformedFiles.length;
@@ -122,7 +106,6 @@ export const useGalleryFiles = () => {
 
             setError(`${errorMessage}\n\n콘솔(F12)에서 자세한 에러를 확인하세요.`);
         } finally {
-            console.log('[useGalleryFiles] finally block - setting loading to false');
             setLoading(false);
         }
     };
@@ -201,6 +184,7 @@ function transformFileData(file, isFavoriteList, favoriteFileIds) {
         duration: file.duration || null,
         size: file.file_size || file.fileSize,
         created_at: file.created_at || file.uploadedAt || file.uploaded_at,
+        folder_id: file.folder_id || null, // Include folder_id for folder filtering
         isFavorite: isFavoriteList ? true : (favoriteFileIds.has(file.id) || file.is_favorite || false),
         processing_status: file.processing_status || (isVideoProcessing ? 'processing' : 'completed'),
         processing_progress: file.processing_progress || 0,
