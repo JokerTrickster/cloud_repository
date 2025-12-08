@@ -523,12 +523,20 @@ const Gallery = () => {
 
     // Update groupedFiles to use folder-filtered files
     const finalGroupedFiles = useMemo(() => {
-        return folderFilteredFiles.reduce((acc, file) => {
+        if (!folderFilteredFiles || folderFilteredFiles.length === 0) {
+            console.log('[Gallery] No filtered files, returning empty object');
+            return {};
+        }
+
+        const grouped = folderFilteredFiles.reduce((acc, file) => {
             const date = file.date;
             if (!acc[date]) acc[date] = [];
             acc[date].push(file);
             return acc;
         }, {});
+
+        console.log('[Gallery] finalGroupedFiles:', Object.keys(grouped).length, 'dates');
+        return grouped;
     }, [folderFilteredFiles]);
 
     // Folder handlers

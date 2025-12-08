@@ -35,7 +35,7 @@ const GalleryGrid = ({
     }
 
     // Empty State
-    if (files.length === 0) {
+    if (!files || files.length === 0) {
         return (
             <div style={{
                 flex: 1,
@@ -118,7 +118,7 @@ const GalleryGrid = ({
                                 }
                             }
                         `}</style>
-                        {uploadState.files.map((file, index) => {
+                        {uploadState.files && uploadState.files.map((file, index) => {
                             const progress = uploadState.progress[index] || 0;
                             const isCompleted = progress === 100;
 
