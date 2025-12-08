@@ -517,16 +517,38 @@ const Gallery = () => {
 
     // Filter files by current folder
     const folderFilteredFiles = useMemo(() => {
+        console.log('[FolderFilter] Filtering files:', {
+            totalFiles: filteredFiles?.length || 0,
+            currentFolder: currentFolder?.id || 'root',
+            currentFolderName: currentFolder?.folder_name || 'root'
+        });
+
         if (!filteredFiles || filteredFiles.length === 0) {
+            console.log('[FolderFilter] No files to filter');
             return [];
         }
 
         if (currentFolder === null) {
             // Show files without folder (root files)
-            return filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
+            const rootFiles = filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
+            console.log('[FolderFilter] Root files:', {
+                count: rootFiles.length,
+                fileIds: rootFiles.map(f => f.id),
+                sample: rootFiles.slice(0, 3).map(f => ({ id: f.id, name: f.name, folder_id: f.folder_id }))
+            });
+            return rootFiles;
         }
+
         // Show only files in current folder
-        return filteredFiles.filter(file => file.folder_id === currentFolder.id);
+        const folderFiles = filteredFiles.filter(file => file.folder_id === currentFolder.id);
+        console.log('[FolderFilter] Folder files:', {
+            folderId: currentFolder.id,
+            folderName: currentFolder.folder_name,
+            count: folderFiles.length,
+            fileIds: folderFiles.map(f => f.id),
+            allFileFolderIds: filteredFiles.map(f => ({ id: f.id, folder_id: f.folder_id }))
+        });
+        return folderFiles;
     }, [filteredFiles, currentFolder]);
 
     // Update groupedFiles to use folder-filtered files

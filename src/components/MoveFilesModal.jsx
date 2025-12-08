@@ -34,9 +34,22 @@ const MoveFilesModal = ({
 
   // 이동 처리
   const handleMove = async () => {
+    console.log('[MoveFilesModal] handleMove called:', {
+      selectedFolder,
+      selectedFiles: selectedFiles.length,
+      isMoving
+    });
+
+    if (isMoving) {
+      console.log('[MoveFilesModal] Already moving, ignoring click');
+      return;
+    }
+
     setIsMoving(true);
     try {
+      console.log('[MoveFilesModal] Calling onMove with folder:', selectedFolder);
       await onMove(selectedFolder);
+      console.log('[MoveFilesModal] onMove completed successfully');
       onClose();
     } catch (err) {
       console.error('[MoveFilesModal] Move error:', err);
