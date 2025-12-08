@@ -59,7 +59,6 @@ const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onM
                     <button
                         onClick={(e) => {
                             console.log('[SelectionActionBar] Move button clicked!', { selectedCount, hasHandler: !!onMoveToFolder });
-                            alert('🟢 MOVE BUTTON CLICKED in SelectionActionBar');
                             onMoveToFolder(e);
                         }}
                         disabled={selectedCount === 0}

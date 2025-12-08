@@ -557,19 +557,19 @@ const Gallery = () => {
         return folderFiles;
     }, [filteredFiles, currentFolder]);
 
-    // Update groupedFiles to use filtered files
+    // Update groupedFiles to use folder-filtered files
     const finalGroupedFiles = useMemo(() => {
-        if (!filteredFiles || filteredFiles.length === 0) {
+        if (!folderFilteredFiles || folderFilteredFiles.length === 0) {
             return {};
         }
 
-        return filteredFiles.reduce((acc, file) => {
+        return folderFilteredFiles.reduce((acc, file) => {
             const date = file.date;
             if (!acc[date]) acc[date] = [];
             acc[date].push(file);
             return acc;
         }, {});
-    }, [filteredFiles]);
+    }, [folderFilteredFiles]);
 
     // Folder handlers
     const handleFolderSelect = async (folder) => {
@@ -654,9 +654,6 @@ const Gallery = () => {
     };
 
     const handleMoveFilesToFolder = () => {
-        // IMMEDIATE TEST: This should appear if button click is registering
-        alert('🔵 BUTTON CLICKED - handleMoveFilesToFolder 실행됨');
-
         console.log('[Gallery] handleMoveFilesToFolder called:', {
             selectedFilesCount: selectedFiles.length,
             selectedFileIds: selectedFiles
