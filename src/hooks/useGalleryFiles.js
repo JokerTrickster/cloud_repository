@@ -15,6 +15,8 @@ export const useGalleryFiles = () => {
     const apiEndTime = useRef(0);
 
     const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly } = {}) => {
+        console.log('[useGalleryFiles] loadFiles called with params:', { dateRange, filterType, sortOption, favoriteOnly });
+
         setLoading(true);
         setError('');
 
@@ -80,7 +82,9 @@ export const useGalleryFiles = () => {
             }
 
             console.log('[useGalleryFiles] Setting files state with', transformedFiles.length, 'files');
+            console.log('[useGalleryFiles] About to call setFiles...');
             setFiles(transformedFiles);
+            console.log('[useGalleryFiles] setFiles called (synchronous part done)');
 
             // Verify state was set
             setTimeout(() => {
@@ -118,6 +122,7 @@ export const useGalleryFiles = () => {
 
             setError(`${errorMessage}\n\n콘솔(F12)에서 자세한 에러를 확인하세요.`);
         } finally {
+            console.log('[useGalleryFiles] finally block - setting loading to false');
             setLoading(false);
         }
     };
