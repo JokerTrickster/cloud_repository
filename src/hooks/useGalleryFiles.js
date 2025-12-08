@@ -69,10 +69,17 @@ export const useGalleryFiles = () => {
 
                 const result = await fileApi.getFiles(params);
 
+                console.log('[useGalleryFiles] API result:', result);
+                console.log('[useGalleryFiles] result.files length:', result.files?.length || 0);
+
                 // Transform API response to match frontend structure
                 transformedFiles = result.files.map(file => transformFileData(file, false, favoriteFileIds));
+
+                console.log('[useGalleryFiles] transformedFiles length:', transformedFiles.length);
+                console.log('[useGalleryFiles] Sample transformed file:', transformedFiles[0]);
             }
 
+            console.log('[useGalleryFiles] Setting files state with', transformedFiles.length, 'files');
             setFiles(transformedFiles);
 
             apiEndTime.current = performance.now();

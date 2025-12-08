@@ -230,12 +230,28 @@ const Gallery = () => {
 
     // Memoized Filter and Sort Logic (client-side filtering for search term only)
     const filteredFiles = useMemo(() => {
-        return files.filter(file => {
+        console.log('[Gallery] filteredFiles recalculating...');
+        console.log('[Gallery] files count:', files?.length || 0);
+        console.log('[Gallery] searchTerm:', searchTerm);
+
+        if (!files || files.length === 0) {
+            console.log('[Gallery] No files to filter');
+            return [];
+        }
+
+        const filtered = files.filter(file => {
+            // Safety check for tags
+            const fileTags = file.tags || [];
+
             const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase().replace('#', '')));
+                fileTags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase().replace('#', '')));
 
             return matchesSearch;
         });
+
+        console.log('[Gallery] filteredFiles result:', filtered.length, 'files');
+        console.log('[Gallery] Sample filtered file:', filtered[0]);
+        return filtered;
     }, [files, searchTerm]);
 
     // Memoized Grouping (kept for compatibility, but using finalGroupedFiles instead)
