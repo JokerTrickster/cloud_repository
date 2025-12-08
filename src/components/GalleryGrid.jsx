@@ -197,7 +197,7 @@ const GalleryGrid = ({
             )}
 
             {/* Existing Files by Date */}
-            {Object.entries(groupedFiles).map(([date, dateFiles]) => (
+            {groupedFiles && Object.entries(groupedFiles).map(([date, dateFiles]) => (
                 <div key={date} id={`date-${date}`} style={{ marginBottom: '24px', scrollMarginTop: '140px' }}>
                     <h3 style={{
                         fontSize: '14px',
