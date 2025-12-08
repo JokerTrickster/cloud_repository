@@ -522,8 +522,10 @@ const Gallery = () => {
     };
 
     // Filter files by current folder
+    // Note: When currentFolder is set, loadFiles already loads folder-specific files via backend API
+    // So we don't need to filter again - just return filteredFiles directly
     const folderFilteredFiles = useMemo(() => {
-        console.log('[FolderFilter] Filtering files:', {
+        console.log('[FolderFilter] Files loaded:', {
             totalFiles: filteredFiles?.length || 0,
             currentFolder: currentFolder?.id || 'root',
             currentFolderName: currentFolder?.folder_name || 'root'
@@ -535,7 +537,7 @@ const Gallery = () => {
         }
 
         if (currentFolder === null) {
-            // Show files without folder (root files)
+            // Root view: Show files without folder (client-side filter needed)
             const rootFiles = filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
             console.log('[FolderFilter] Root files:', {
                 count: rootFiles.length,
@@ -545,16 +547,15 @@ const Gallery = () => {
             return rootFiles;
         }
 
-        // Show only files in current folder
-        const folderFiles = filteredFiles.filter(file => file.folder_id === currentFolder.id);
-        console.log('[FolderFilter] Folder files:', {
+        // Folder view: Backend already returned folder-specific files via loadFiles({ folderId })
+        // No additional filtering needed - just return all filteredFiles
+        console.log('[FolderFilter] Folder files (from backend):', {
             folderId: currentFolder.id,
             folderName: currentFolder.folder_name,
-            count: folderFiles.length,
-            fileIds: folderFiles.map(f => f.id),
-            allFileFolderIds: filteredFiles.map(f => ({ id: f.id, folder_id: f.folder_id }))
+            count: filteredFiles.length,
+            fileIds: filteredFiles.map(f => f.id)
         });
-        return folderFiles;
+        return filteredFiles;
     }, [filteredFiles, currentFolder]);
 
     // Update groupedFiles to use folder-filtered files
