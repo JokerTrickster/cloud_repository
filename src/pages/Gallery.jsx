@@ -572,13 +572,11 @@ const Gallery = () => {
     }, [folderFilteredFiles]);
 
     // Folder handlers
-    const handleFolderSelect = async (folder) => {
+    const handleFolderSelect = (folder) => {
         console.log('[Gallery] Folder selected:', folder?.id || 'root');
         setCurrentFolder(folder);
         setSelectedFiles([]); // Clear selection when changing folders
-
-        // Reload files when folder changes to get fresh data
-        await loadFiles();
+        // Note: useEffect will automatically reload files when currentFolder changes
     };
 
     const handleCreateFolder = (parentFolderId) => {
@@ -683,17 +681,12 @@ const Gallery = () => {
             setSelectedFiles([]);
             setIsSelectionMode(false);
 
-            // Reload data first
-            console.log('[MoveFiles] Reloading files and folders...');
-            await Promise.all([loadFiles(), loadFolders()]);
-            console.log('[MoveFiles] Reload complete');
-
-            // Auto-navigate to target folder after move
+            // Auto-navigate to target folder FIRST (before reload)
             if (targetFolderId === null) {
                 console.log('[MoveFiles] Navigating to root folder');
-                setCurrentFolder(null); // Move to root
+                setCurrentFolder(null);
             } else {
-                // Find the target folder object
+                // Find the target folder object from current folders state
                 const findFolder = (folders, id) => {
                     for (const folder of folders) {
                         if (folder.id === id) return folder;
@@ -716,6 +709,12 @@ const Gallery = () => {
                     console.warn('[MoveFiles] Target folder not found in folder tree!');
                 }
             }
+
+            // Reload data after setting currentFolder
+            // This will trigger useEffect to load files for the new folder
+            console.log('[MoveFiles] Reloading folders...');
+            await loadFolders();
+            console.log('[MoveFiles] Reload complete');
         } catch (err) {
             console.error('[Gallery] Move files failed:', err);
 
