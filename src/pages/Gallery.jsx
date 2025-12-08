@@ -513,16 +513,33 @@ const Gallery = () => {
 
     // Filter files by current folder
     const folderFilteredFiles = useMemo(() => {
+        console.log('[Gallery] folderFilteredFiles recalculating...');
+        console.log('[Gallery] currentFolder:', currentFolder);
+        console.log('[Gallery] filteredFiles count:', filteredFiles?.length || 0);
+
+        if (!filteredFiles || filteredFiles.length === 0) {
+            console.log('[Gallery] filteredFiles is empty or null');
+            return [];
+        }
+
         if (currentFolder === null) {
             // Show files without folder (root files) or all files if folder_id doesn't exist
-            return filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
+            const rootFiles = filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
+            console.log('[Gallery] Root view - filtered', rootFiles.length, 'files without folder_id');
+            console.log('[Gallery] Sample file folder_id values:', filteredFiles.slice(0, 3).map(f => ({ name: f.name, folder_id: f.folder_id })));
+            return rootFiles;
         }
         // Show only files in current folder
-        return filteredFiles.filter(file => file.folder_id === currentFolder.id);
+        const folderFiles = filteredFiles.filter(file => file.folder_id === currentFolder.id);
+        console.log('[Gallery] Folder view - filtered', folderFiles.length, 'files for folder', currentFolder.id);
+        return folderFiles;
     }, [filteredFiles, currentFolder]);
 
     // Update groupedFiles to use folder-filtered files
     const finalGroupedFiles = useMemo(() => {
+        console.log('[Gallery] finalGroupedFiles recalculating...');
+        console.log('[Gallery] folderFilteredFiles count:', folderFilteredFiles?.length || 0);
+
         if (!folderFilteredFiles || folderFilteredFiles.length === 0) {
             console.log('[Gallery] No filtered files, returning empty object');
             return {};
@@ -535,7 +552,9 @@ const Gallery = () => {
             return acc;
         }, {});
 
-        console.log('[Gallery] finalGroupedFiles:', Object.keys(grouped).length, 'dates');
+        console.log('[Gallery] finalGroupedFiles created:', Object.keys(grouped).length, 'dates');
+        console.log('[Gallery] finalGroupedFiles dates:', Object.keys(grouped));
+        console.log('[Gallery] Total files in groups:', Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0));
         return grouped;
     }, [folderFilteredFiles]);
 
