@@ -378,8 +378,27 @@ const FolderSidebar = ({
 
               <div
                 onClick={() => {
-                  if (window.confirm(`"${contextMenu.folder.folder_name}" 폴더를 삭제하시겠습니까?\n폴더 내 파일은 루트로 이동됩니다.`)) {
-                    onDeleteFolder(contextMenu.folder.id);
+                  const folder = contextMenu.folder;
+                  const hasSubFolders = folder.sub_folders && folder.sub_folders.length > 0;
+                  const fileCount = folder.file_count || 0;
+
+                  // Check for subfolders first
+                  if (hasSubFolders) {
+                    alert(`"${folder.folder_name}" 폴더에 하위 폴더가 있습니다.\n먼저 하위 폴더를 삭제하거나 이동해주세요.`);
+                    closeContextMenu();
+                    return;
+                  }
+
+                  // Build confirmation message based on file count
+                  let confirmMessage;
+                  if (fileCount > 0) {
+                    confirmMessage = `"${folder.folder_name}" 폴더에 ${fileCount}개의 파일이 있습니다.\n\n폴더를 삭제하면 모든 파일이 루트 폴더로 이동됩니다.\n\n계속하시겠습니까?`;
+                  } else {
+                    confirmMessage = `"${folder.folder_name}" 폴더를 삭제하시겠습니까?`;
+                  }
+
+                  if (window.confirm(confirmMessage)) {
+                    onDeleteFolder(folder.id);
                   }
                   closeContextMenu();
                 }}

@@ -589,7 +589,35 @@ const Gallery = () => {
             }
         } catch (err) {
             console.error('[Gallery] Delete folder failed:', err);
-            alert('폴더 삭제에 실패했습니다.');
+
+            // Enhanced error handling with specific messages
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+            const statusCode = err.response?.status;
+
+            let userMessage = '폴더 삭제에 실패했습니다.';
+
+            if (statusCode === 404) {
+                userMessage = '폴더를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.';
+            } else if (statusCode === 403) {
+                userMessage = '폴더를 삭제할 권한이 없습니다.';
+            } else if (statusCode === 400) {
+                if (errorMsg?.includes('sub') || errorMsg?.includes('하위')) {
+                    userMessage = '하위 폴더가 있는 폴더는 삭제할 수 없습니다.\n먼저 하위 폴더를 삭제해주세요.';
+                } else if (errorMsg?.includes('file') || errorMsg?.includes('파일')) {
+                    userMessage = '폴더에 파일이 있어 삭제할 수 없습니다.\n먼저 파일을 이동하거나 삭제해주세요.';
+                } else {
+                    userMessage = `폴더 삭제 실패: ${errorMsg}`;
+                }
+            } else if (statusCode === 500) {
+                userMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+            } else if (errorMsg) {
+                userMessage = `폴더 삭제 실패: ${errorMsg}`;
+            }
+
+            alert(userMessage);
+
+            // Reload folders in case state changed
+            loadFolders();
         }
     };
 
@@ -610,6 +638,37 @@ const Gallery = () => {
             loadFolders(); // Update folder file counts
         } catch (err) {
             console.error('[Gallery] Move files failed:', err);
+
+            // Enhanced error handling with specific messages
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+            const statusCode = err.response?.status;
+
+            let userMessage = '파일 이동에 실패했습니다.';
+
+            if (statusCode === 404) {
+                userMessage = '폴더를 찾을 수 없습니다. 폴더가 삭제되었을 수 있습니다.';
+            } else if (statusCode === 403) {
+                userMessage = '파일을 이동할 권한이 없습니다.';
+            } else if (statusCode === 400) {
+                if (errorMsg?.includes('limit') || errorMsg?.includes('제한')) {
+                    userMessage = '한번에 이동할 수 있는 파일 개수를 초과했습니다.\n파일을 나눠서 이동해주세요.';
+                } else if (errorMsg?.includes('not found')) {
+                    userMessage = '일부 파일을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.';
+                } else {
+                    userMessage = `파일 이동 실패: ${errorMsg}`;
+                }
+            } else if (statusCode === 500) {
+                userMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+            } else if (errorMsg) {
+                userMessage = `파일 이동 실패: ${errorMsg}`;
+            }
+
+            alert(userMessage);
+
+            // Reload to sync state
+            loadFiles();
+            loadFolders();
+
             throw err;
         }
     };
