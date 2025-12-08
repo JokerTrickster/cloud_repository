@@ -1,7 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Check, Trash2, FolderInput } from 'lucide-react';
 
 const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onMoveToFolder }) => {
+    useEffect(() => {
+        console.log('[SelectionActionBar] Component mounted/updated:', {
+            selectedCount,
+            hasOnMoveToFolder: !!onMoveToFolder,
+            hasOnDelete: !!onDelete,
+            hasOnDownload: !!onDownload,
+            hasOnCancel: !!onCancel
+        });
+    }, [selectedCount, onMoveToFolder, onDelete, onDownload, onCancel]);
+
     return (
         <div style={{
             position: 'fixed',
@@ -47,13 +57,18 @@ const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onM
             <div style={{ display: 'flex', gap: '8px' }}>
                 {onMoveToFolder && (
                     <button
-                        onClick={onMoveToFolder}
+                        onClick={(e) => {
+                            console.log('[SelectionActionBar] Move button clicked!', { selectedCount, hasHandler: !!onMoveToFolder });
+                            alert('🟢 MOVE BUTTON CLICKED in SelectionActionBar');
+                            onMoveToFolder(e);
+                        }}
                         disabled={selectedCount === 0}
                         style={{
                             background: 'none', border: 'none', cursor: 'pointer',
                             color: selectedCount === 0 ? 'var(--text-tertiary)' : 'var(--secondary)',
                             display: 'flex', alignItems: 'center', gap: '4px',
-                            transition: 'color 0.2s'
+                            transition: 'color 0.2s',
+                            pointerEvents: selectedCount === 0 ? 'none' : 'auto'
                         }}
                         title="폴더로 이동"
                     >

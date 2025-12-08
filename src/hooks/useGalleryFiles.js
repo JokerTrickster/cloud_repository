@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import fileApi from '../api/fileApi';
+import folderApi from '../api/folderApi';
 
 export const useGalleryFiles = () => {
     const [files, setFiles] = useState([]);
@@ -14,7 +15,7 @@ export const useGalleryFiles = () => {
     const totalImagesToLoad = useRef(0);
     const apiEndTime = useRef(0);
 
-    const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly } = {}) => {
+    const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly, folderId } = {}) => {
         setLoading(true);
         setError('');
 
@@ -56,8 +57,52 @@ export const useGalleryFiles = () => {
                 console.log('[Favorites] Favorites data:', favoritesData);
 
                 transformedFiles = favoritesData.map(file => transformFileData(file, true, favoriteFileIds));
+            } else if (folderId) {
+                // Fetch files in specific folder
+                console.log(`[Gallery] Fetching files for folder: ${folderId}`);
+                const result = await folderApi.getFolderFiles(folderId);
+
+                // Handle response structure
+                const rawFiles = result.files || result.data || (Array.isArray(result) ? result : []);
+
+                // Transform first
+                let files = (rawFiles || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
+
+                // Client-side Filtering
+                if (filterType && filterType !== 'all') {
+                    files = files.filter(f => f.type === filterType);
+                }
+
+                if (dateRange?.start) {
+                    const startDate = format(dateRange.start, 'yyyy-MM-dd');
+                    files = files.filter(f => f.date >= startDate);
+                }
+                if (dateRange?.end) {
+                    const endDate = format(dateRange.end, 'yyyy-MM-dd');
+                    files = files.filter(f => f.date <= endDate);
+                }
+
+                // Client-side Sorting
+                files.sort((a, b) => {
+                    switch (sortOption) {
+                        case 'latest':
+                            return new Date(b.created_at) - new Date(a.created_at);
+                        case 'oldest':
+                            return new Date(a.created_at) - new Date(b.created_at);
+                        case 'name':
+                            return a.name.localeCompare(b.name);
+                        case 'size':
+                            return b.size - a.size;
+                        default:
+                            return 0;
+                    }
+                });
+
+                transformedFiles = files;
+                console.log(`[Gallery] Loaded ${transformedFiles.length} files from folder ${folderId}`);
+
             } else {
-                // Fetch general files list
+                // Fetch general files list (Root or All)
                 const params = {
                     file_type: filterType === 'all' ? undefined : filterType,
                     sort: sortOption,

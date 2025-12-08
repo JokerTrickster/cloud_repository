@@ -52,8 +52,14 @@ const Gallery = () => {
 
     // Load files from API
     useEffect(() => {
-        loadFiles({ dateRange, filterType, sortOption, favoriteOnly });
-    }, [dateRange, filterType, sortOption, favoriteOnly]);
+        loadFiles({
+            dateRange,
+            filterType,
+            sortOption,
+            favoriteOnly,
+            folderId: currentFolder?.id
+        });
+    }, [dateRange, filterType, sortOption, favoriteOnly, currentFolder]);
 
     // Handle URL query param for date navigation
     useEffect(() => {
@@ -551,24 +557,28 @@ const Gallery = () => {
         return folderFiles;
     }, [filteredFiles, currentFolder]);
 
-    // Update groupedFiles to use folder-filtered files
+    // Update groupedFiles to use filtered files
     const finalGroupedFiles = useMemo(() => {
-        if (!folderFilteredFiles || folderFilteredFiles.length === 0) {
+        if (!filteredFiles || filteredFiles.length === 0) {
             return {};
         }
 
-        return folderFilteredFiles.reduce((acc, file) => {
+        return filteredFiles.reduce((acc, file) => {
             const date = file.date;
             if (!acc[date]) acc[date] = [];
             acc[date].push(file);
             return acc;
         }, {});
-    }, [folderFilteredFiles]);
+    }, [filteredFiles]);
 
     // Folder handlers
-    const handleFolderSelect = (folder) => {
+    const handleFolderSelect = async (folder) => {
+        console.log('[Gallery] Folder selected:', folder?.id || 'root');
         setCurrentFolder(folder);
         setSelectedFiles([]); // Clear selection when changing folders
+
+        // Reload files when folder changes to get fresh data
+        await loadFiles();
     };
 
     const handleCreateFolder = (parentFolderId) => {
@@ -644,6 +654,9 @@ const Gallery = () => {
     };
 
     const handleMoveFilesToFolder = () => {
+        // IMMEDIATE TEST: This should appear if button click is registering
+        alert('🔵 BUTTON CLICKED - handleMoveFilesToFolder 실행됨');
+
         console.log('[Gallery] handleMoveFilesToFolder called:', {
             selectedFilesCount: selectedFiles.length,
             selectedFileIds: selectedFiles
