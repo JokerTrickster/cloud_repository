@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, Check, Trash2 } from 'lucide-react';
+import { X, Check, Trash2, FolderInput } from 'lucide-react';
 
-const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete }) => {
+const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onMoveToFolder }) => {
     return (
         <div style={{
             position: 'fixed',
@@ -45,6 +45,28 @@ const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete }) =
             <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
 
             <div style={{ display: 'flex', gap: '8px' }}>
+                {onMoveToFolder && (
+                    <button
+                        onClick={onMoveToFolder}
+                        disabled={selectedCount === 0}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: selectedCount === 0 ? 'var(--text-tertiary)' : 'var(--secondary)',
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            transition: 'color 0.2s'
+                        }}
+                        title="폴더로 이동"
+                    >
+                        <div style={{
+                            padding: '8px',
+                            borderRadius: '50%',
+                            background: selectedCount > 0 ? 'rgba(52, 168, 83, 0.1)' : 'transparent'
+                        }}>
+                            <FolderInput size={20} />
+                        </div>
+                    </button>
+                )}
+
                 <button
                     onClick={onDownload}
                     disabled={selectedCount === 0}

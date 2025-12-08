@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import fileApi from '../api/fileApi';
+import folderApi from '../api/folderApi';
 import FileUpload from '../components/FileUpload';
 import TagEditModal from '../components/TagEditModal';
 import OptionsModal from '../components/OptionsModal';
@@ -14,6 +15,9 @@ import GallerySearchBar from '../components/GallerySearchBar';
 import TagFilterBar from '../components/TagFilterBar';
 import GalleryGrid from '../components/GalleryGrid';
 import DebugLogger from '../components/DebugLogger';
+import FolderSidebar from '../components/FolderSidebar';
+import CreateFolderModal from '../components/CreateFolderModal';
+import MoveFilesModal from '../components/MoveFilesModal';
 import { useGalleryFiles } from '../hooks/useGalleryFiles';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 
@@ -36,6 +40,14 @@ const Gallery = () => {
     const [uploadState, setUploadState] = useState(null); // Background upload state
     const [editingFile, setEditingFile] = useState(null);
     const [optionsModalFile, setOptionsModalFile] = useState(null);
+
+    // Folder management state
+    const [folders, setFolders] = useState([]);
+    const [currentFolder, setCurrentFolder] = useState(null); // null = root
+    const [showCreateFolder, setShowCreateFolder] = useState(false);
+    const [showMoveFiles, setShowMoveFiles] = useState(false);
+    const [editingFolder, setEditingFolder] = useState(null);
+    const [createFolderParentId, setCreateFolderParentId] = useState(null);
 
     // Load files from API
     useEffect(() => {
@@ -225,7 +237,7 @@ const Gallery = () => {
         });
     }, [files, searchTerm]);
 
-    // Memoized Grouping
+    // Memoized Grouping (kept for compatibility, but using finalGroupedFiles instead)
     const groupedFiles = useMemo(() => {
         return filteredFiles.reduce((acc, file) => {
             const date = file.date;
@@ -483,8 +495,126 @@ const Gallery = () => {
         setEditingFile(file);
     };
 
+    // Load folders on mount
+    useEffect(() => {
+        loadFolders();
+    }, []);
+
+    // Load folders function
+    const loadFolders = async () => {
+        try {
+            const folderData = await folderApi.getFolders();
+            setFolders(folderData);
+        } catch (err) {
+            console.error('[Gallery] Failed to load folders:', err);
+        }
+    };
+
+    // Filter files by current folder
+    const folderFilteredFiles = useMemo(() => {
+        if (currentFolder === null) {
+            // Show all files when no folder selected
+            return filteredFiles;
+        }
+        // Show only files in current folder
+        return filteredFiles.filter(file => file.folder_id === currentFolder.id);
+    }, [filteredFiles, currentFolder]);
+
+    // Update groupedFiles to use folder-filtered files
+    const finalGroupedFiles = useMemo(() => {
+        return folderFilteredFiles.reduce((acc, file) => {
+            const date = file.date;
+            if (!acc[date]) acc[date] = [];
+            acc[date].push(file);
+            return acc;
+        }, {});
+    }, [folderFilteredFiles]);
+
+    // Folder handlers
+    const handleFolderSelect = (folder) => {
+        setCurrentFolder(folder);
+        setSelectedFiles([]); // Clear selection when changing folders
+    };
+
+    const handleCreateFolder = (parentFolderId) => {
+        setCreateFolderParentId(parentFolderId);
+        setEditingFolder(null);
+        setShowCreateFolder(true);
+    };
+
+    const handleRenameFolder = (folder) => {
+        setEditingFolder(folder);
+        setShowCreateFolder(true);
+    };
+
+    const handleFolderSubmit = async (folderName, parentFolderId) => {
+        try {
+            if (editingFolder) {
+                // Rename existing folder
+                await folderApi.updateFolder(editingFolder.id, { folder_name: folderName });
+            } else {
+                // Create new folder
+                await folderApi.createFolder({
+                    folder_name: folderName,
+                    parent_folder_id: parentFolderId
+                });
+            }
+            loadFolders(); // Reload folders
+        } catch (err) {
+            console.error('[Gallery] Folder operation failed:', err);
+            throw err;
+        }
+    };
+
+    const handleDeleteFolder = async (folderId) => {
+        try {
+            await folderApi.deleteFolder(folderId);
+            loadFolders(); // Reload folders
+            loadFiles(); // Reload files (they moved to root)
+            if (currentFolder?.id === folderId) {
+                setCurrentFolder(null); // Reset to root if deleted folder was selected
+            }
+        } catch (err) {
+            console.error('[Gallery] Delete folder failed:', err);
+            alert('폴더 삭제에 실패했습니다.');
+        }
+    };
+
+    const handleMoveFilesToFolder = () => {
+        if (selectedFiles.length === 0) {
+            alert('이동할 파일을 선택하세요.');
+            return;
+        }
+        setShowMoveFiles(true);
+    };
+
+    const handleMoveFiles = async (targetFolderId) => {
+        try {
+            await folderApi.moveFiles(selectedFiles, targetFolderId);
+            setSelectedFiles([]);
+            setIsSelectionMode(false);
+            loadFiles(); // Reload files
+            loadFolders(); // Update folder file counts
+        } catch (err) {
+            console.error('[Gallery] Move files failed:', err);
+            throw err;
+        }
+    };
+
     return (
-        <div style={{ padding: '16px', height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: '80px' }}>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+            {/* Folder Sidebar */}
+            <FolderSidebar
+                folders={folders}
+                currentFolder={currentFolder}
+                onFolderSelect={handleFolderSelect}
+                onCreateFolder={handleCreateFolder}
+                onRenameFolder={handleRenameFolder}
+                onDeleteFolder={handleDeleteFolder}
+            />
+
+            {/* Main Gallery Content */}
+            <div style={{ flex: 1, padding: '16px', height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: '80px', overflow: 'auto' }}>
             <style>{`
                 .gallery-grid {
                     display: grid;
@@ -608,7 +738,7 @@ const Gallery = () => {
             <GalleryGrid
                 loading={loading}
                 files={files}
-                groupedFiles={groupedFiles}
+                groupedFiles={finalGroupedFiles}
                 filteredFiles={filteredFiles}
                 isSelectionMode={isSelectionMode}
                 selectedFiles={selectedFiles}
@@ -636,6 +766,7 @@ const Gallery = () => {
                     onCancel={() => { setIsSelectionMode(false); setSelectedFiles([]); }}
                     onDownload={handleDownload}
                     onDelete={handleDelete}
+                    onMoveToFolder={handleMoveFilesToFolder}
                 />
             )}
 
@@ -788,8 +919,32 @@ const Gallery = () => {
                 />
             )}
 
+            {/* Folder Modals */}
+            {showCreateFolder && (
+                <CreateFolderModal
+                    onClose={() => {
+                        setShowCreateFolder(false);
+                        setEditingFolder(null);
+                        setCreateFolderParentId(null);
+                    }}
+                    onSubmit={handleFolderSubmit}
+                    editingFolder={editingFolder}
+                    defaultParentId={createFolderParentId}
+                />
+            )}
+
+            {showMoveFiles && (
+                <MoveFilesModal
+                    selectedFiles={files.filter(f => selectedFiles.includes(f.id))}
+                    folders={folders}
+                    onClose={() => setShowMoveFiles(false)}
+                    onMove={handleMoveFiles}
+                />
+            )}
+
             {/* Debug Logger for mobile debugging */}
             <DebugLogger />
+        </div>
         </div>
     );
 };
