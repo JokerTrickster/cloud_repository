@@ -65,8 +65,26 @@ export const useGalleryFiles = () => {
                 // Handle response structure
                 const rawFiles = result.files || result.data || (Array.isArray(result) ? result : []);
 
-                // Transform files (backend should provide download_url and thumbnail_url)
-                let files = (rawFiles || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
+                // TEMPORARY: Generate URLs from s3_key until backend provides them
+                const S3_BUCKET = 'joker-cloud-repository-dev';
+                const S3_REGION = 'ap-south-1';
+
+                const filesWithUrls = rawFiles.map(file => {
+                    // If backend already provides URLs, use them
+                    if (file.download_url && file.thumbnail_url) {
+                        return file;
+                    }
+
+                    // Otherwise generate URLs from keys
+                    return {
+                        ...file,
+                        download_url: file.download_url || (file.s3_key ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${file.s3_key}` : undefined),
+                        thumbnail_url: file.thumbnail_url || (file.thumbnail_key ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${file.thumbnail_key}` : undefined)
+                    };
+                });
+
+                // Transform files
+                let files = (filesWithUrls || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
 
                 // Client-side Filtering
                 if (filterType && filterType !== 'all') {
