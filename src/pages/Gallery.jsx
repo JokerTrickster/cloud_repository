@@ -631,14 +631,26 @@ const Gallery = () => {
 
     const handleMoveFiles = async (targetFolderId) => {
         try {
-            await folderApi.moveFiles(selectedFiles, targetFolderId);
+            console.log('[MoveFiles] Starting move operation:', {
+                selectedFiles,
+                targetFolderId,
+                fileCount: selectedFiles.length
+            });
+
+            const result = await folderApi.moveFiles(selectedFiles, targetFolderId);
+            console.log('[MoveFiles] API response:', result);
+
             setSelectedFiles([]);
             setIsSelectionMode(false);
-            loadFiles(); // Reload files
-            loadFolders(); // Update folder file counts
+
+            // Reload data first
+            console.log('[MoveFiles] Reloading files and folders...');
+            await Promise.all([loadFiles(), loadFolders()]);
+            console.log('[MoveFiles] Reload complete');
 
             // Auto-navigate to target folder after move
             if (targetFolderId === null) {
+                console.log('[MoveFiles] Navigating to root folder');
                 setCurrentFolder(null); // Move to root
             } else {
                 // Find the target folder object
@@ -653,8 +665,15 @@ const Gallery = () => {
                     return null;
                 };
                 const targetFolder = findFolder(folders, targetFolderId);
+                console.log('[MoveFiles] Target folder search result:', {
+                    targetFolderId,
+                    found: !!targetFolder,
+                    folderName: targetFolder?.folder_name
+                });
                 if (targetFolder) {
                     setCurrentFolder(targetFolder);
+                } else {
+                    console.warn('[MoveFiles] Target folder not found in folder tree!');
                 }
             }
         } catch (err) {
