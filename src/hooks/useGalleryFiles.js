@@ -76,11 +76,16 @@ export const useGalleryFiles = () => {
                 transformedFiles = result.files.map(file => transformFileData(file, false, favoriteFileIds));
 
                 console.log('[useGalleryFiles] transformedFiles length:', transformedFiles.length);
-                console.log('[useGalleryFiles] Sample transformed file:', transformedFiles[0]);
+                console.log('[useGalleryFiles] Sample transformed file:', JSON.stringify(transformedFiles[0], null, 2));
             }
 
             console.log('[useGalleryFiles] Setting files state with', transformedFiles.length, 'files');
             setFiles(transformedFiles);
+
+            // Verify state was set
+            setTimeout(() => {
+                console.log('[useGalleryFiles] State verification - files should now be set');
+            }, 100);
 
             apiEndTime.current = performance.now();
             totalImagesToLoad.current = transformedFiles.length;

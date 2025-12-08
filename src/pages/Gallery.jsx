@@ -25,6 +25,14 @@ const Gallery = () => {
     const location = useLocation();
     const { files, setFiles, loading, error, tags, setTags, loadFiles, handleImageLoad } = useGalleryFiles();
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Debug: Log files state changes
+    useEffect(() => {
+        console.log('[Gallery] files state changed, new length:', files?.length || 0);
+        if (files && files.length > 0) {
+            console.log('[Gallery] Sample file from state:', files[0]);
+        }
+    }, [files]);
     const [playingVideo, setPlayingVideo] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
     const [selectedFiles, setSelectedFiles] = useState([]);
