@@ -673,6 +673,7 @@ const Gallery = () => {
             console.log('[MoveFiles] Starting move operation:', {
                 selectedFiles,
                 targetFolderId,
+                currentFolderId: currentFolder?.id,
                 fileCount: selectedFiles.length
             });
 
@@ -682,40 +683,21 @@ const Gallery = () => {
             setSelectedFiles([]);
             setIsSelectionMode(false);
 
-            // Auto-navigate to target folder FIRST (before reload)
-            if (targetFolderId === null) {
-                console.log('[MoveFiles] Navigating to root folder');
-                setCurrentFolder(null);
-            } else {
-                // Find the target folder object from current folders state
-                const findFolder = (folders, id) => {
-                    for (const folder of folders) {
-                        if (folder.id === id) return folder;
-                        if (folder.sub_folders) {
-                            const found = findFolder(folder.sub_folders, id);
-                            if (found) return found;
-                        }
-                    }
-                    return null;
-                };
-                const targetFolder = findFolder(folders, targetFolderId);
-                console.log('[MoveFiles] Target folder search result:', {
-                    targetFolderId,
-                    found: !!targetFolder,
-                    folderName: targetFolder?.folder_name
-                });
-                if (targetFolder) {
-                    setCurrentFolder(targetFolder);
-                } else {
-                    console.warn('[MoveFiles] Target folder not found in folder tree!');
-                }
-            }
-
-            // Reload data after setting currentFolder
-            // This will trigger useEffect to load files for the new folder
+            // Reload folders first to get updated file counts
             console.log('[MoveFiles] Reloading folders...');
             await loadFolders();
-            console.log('[MoveFiles] Reload complete');
+
+            // Then reload files for current folder to refresh the view
+            console.log('[MoveFiles] Reloading files for current folder...');
+            await loadFiles({
+                dateRange,
+                filterType,
+                sortOption,
+                favoriteOnly,
+                folderId: currentFolder?.id
+            });
+
+            console.log('[MoveFiles] Move operation complete');
         } catch (err) {
             console.error('[Gallery] Move files failed:', err);
 
