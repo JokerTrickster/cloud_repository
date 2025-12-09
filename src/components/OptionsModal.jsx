@@ -1,7 +1,7 @@
 import React from 'react';
-import { Edit2, Star, X } from 'lucide-react';
+import { Edit2, Star, X, Share2 } from 'lucide-react';
 
-const OptionsModal = ({ file, onClose, onTagEdit, onToggleFavorite }) => {
+const OptionsModal = ({ file, onClose, onTagEdit, onToggleFavorite, onShare }) => {
     if (!file) return null;
 
     return (
@@ -87,6 +87,32 @@ const OptionsModal = ({ file, onClose, onTagEdit, onToggleFavorite }) => {
                     >
                         <Star size={20} fill={file.isFavorite ? '#FFD700' : 'none'} />
                         {file.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            if (onShare) {
+                                onShare(file);
+                            }
+                            onClose();
+                        }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            background: '#f8f9fa',
+                            border: '1px solid #eee',
+                            borderRadius: '12px',
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            color: '#333',
+                            cursor: 'pointer',
+                            width: '100%'
+                        }}
+                    >
+                        <Share2 size={20} />
+                        공유하기
                     </button>
                 </div>
             </div>

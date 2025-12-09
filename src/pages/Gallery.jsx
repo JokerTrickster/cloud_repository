@@ -1076,6 +1076,10 @@ const Gallery = () => {
                         onToggleFavorite={(fileId, isFavorite) => {
                             handleToggleFavorite(fileId, isFavorite);
                         }}
+                        onShare={(file) => {
+                            setOptionsModalFile(null);
+                            handleShare('file', file.id, file.name);
+                        }}
                     />
                 )}
 
