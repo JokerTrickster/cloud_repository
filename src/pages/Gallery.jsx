@@ -825,6 +825,7 @@ const Gallery = () => {
                         onFilterChange={setFilterType}
                         favoriteOnly={favoriteOnly}
                         onFavoriteToggle={() => setFavoriteOnly(!favoriteOnly)}
+                        onFolderClick={() => setIsFolderSidebarOpen(true)}
                     />
 
                     {/* Tag Filter Bar */}

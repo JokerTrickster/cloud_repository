@@ -1,7 +1,7 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, Folder } from 'lucide-react';
 
-const GalleryFilters = ({ filterType, onFilterChange, favoriteOnly, onFavoriteToggle }) => {
+const GalleryFilters = ({ filterType, onFilterChange, favoriteOnly, onFavoriteToggle, onFolderClick }) => {
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -24,6 +24,29 @@ const GalleryFilters = ({ filterType, onFilterChange, favoriteOnly, onFavoriteTo
                         {type === 'all' ? '전체' : type === 'image' ? '이미지' : '동영상'}
                     </button>
                 ))}
+
+                {/* Folder Navigator */}
+                {onFolderClick && (
+                    <button
+                        onClick={onFolderClick}
+                        style={{
+                            padding: '6px 12px',
+                            borderRadius: 'var(--radius-full)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text-secondary)',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            letterSpacing: '0'
+                        }}
+                    >
+                        <Folder size={14} color="#F59E0B" strokeWidth={2} />
+                        폴더
+                    </button>
+                )}
 
                 {/* Favorite Filter */}
                 <button
