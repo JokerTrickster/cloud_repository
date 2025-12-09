@@ -85,5 +85,23 @@ export const shareApi = {
   getSharedWithMeFiles: async () => {
     const response = await shareClient.get('/files/shared-with-me');
     return response.data;
+  },
+
+  // ========== 내가 공유한 항목 ==========
+
+  /**
+   * 내가 공유한 폴더 목록
+   */
+  getSharedByMeFolders: async () => {
+    const response = await shareClient.get('/folders/shared-by-me');
+    return response.data;
+  },
+
+  /**
+   * 내가 공유한 파일 목록
+   */
+  getSharedByMeFiles: async () => {
+    const response = await shareClient.get('/files/shared-by-me');
+    return response.data;
   }
 };
