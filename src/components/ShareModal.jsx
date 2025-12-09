@@ -41,7 +41,18 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
       console.error('[ShareModal] Failed to load shared users:', err);
       // 에러 발생시 빈 배열로 초기화 (React 렌더링 에러 방지)
       setSharedUsers([]);
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || '공유 목록을 불러오는데 실패했습니다.';
+      // 에러 메시지를 안전하게 문자열로 변환 (객체인 경우 처리)
+      let errorMsg = '공유 목록을 불러오는데 실패했습니다.';
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data.error === 'string') {
+          errorMsg = data.error;
+        } else if (typeof data.message === 'string') {
+          errorMsg = data.message;
+        } else if (data.error?.message) {
+          errorMsg = data.error.message;
+        }
+      }
       setError(errorMsg);
     } finally {
       setLoadingShares(false);
@@ -93,7 +104,18 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
       await loadSharedUsers();
     } catch (err) {
       console.error('[ShareModal] Failed to share:', err);
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || '공유에 실패했습니다.';
+      // 에러 메시지를 안전하게 문자열로 변환
+      let errorMsg = '공유에 실패했습니다.';
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data.error === 'string') {
+          errorMsg = data.error;
+        } else if (typeof data.message === 'string') {
+          errorMsg = data.message;
+        } else if (data.error?.message) {
+          errorMsg = data.error.message;
+        }
+      }
       alert(errorMsg);
       setError(errorMsg);
     } finally {
@@ -120,7 +142,18 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
       await loadSharedUsers();
     } catch (err) {
       console.error('[ShareModal] Failed to revoke share:', err);
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || '공유 취소에 실패했습니다.';
+      // 에러 메시지를 안전하게 문자열로 변환
+      let errorMsg = '공유 취소에 실패했습니다.';
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data.error === 'string') {
+          errorMsg = data.error;
+        } else if (typeof data.message === 'string') {
+          errorMsg = data.message;
+        } else if (data.error?.message) {
+          errorMsg = data.error.message;
+        }
+      }
       alert(errorMsg);
       setError(errorMsg);
     } finally {
