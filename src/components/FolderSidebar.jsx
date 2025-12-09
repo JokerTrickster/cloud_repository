@@ -460,8 +460,9 @@ const FolderSidebar = ({
               {/* Mobile bottom spacer for safe area */}
               {isMobile && (
                 <div style={{
-                  height: 'max(20px, env(safe-area-inset-bottom))',
-                  background: 'transparent'
+                  height: 'calc(40px + env(safe-area-inset-bottom, 0px))',
+                  background: 'transparent',
+                  flexShrink: 0
                 }} />
               )}
             </div>
