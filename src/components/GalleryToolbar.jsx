@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarIcon, X, UploadIcon, Check } from 'lucide-react';
+import { CalendarIcon, X, UploadIcon, Check, Share } from 'lucide-react';
 import { format } from 'date-fns';
 
 const GalleryToolbar = ({
@@ -11,7 +11,9 @@ const GalleryToolbar = ({
     showCalendar,
     onUploadClick,
     onSelectionModeToggle,
-    isSelectionMode
+    isSelectionMode,
+    onShareFolder,
+    currentFolder
 }) => {
     return (
         <div className="gallery-toolbar">
@@ -103,6 +105,26 @@ const GalleryToolbar = ({
             <div style={{ display: 'flex', gap: '8px' }}>
                 {!isSelectionMode && (
                     <>
+                        {currentFolder && onShareFolder && (
+                            <button
+                                onClick={onShareFolder}
+                                style={{
+                                    padding: '6px 12px',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--primary)',
+                                    color: 'var(--primary)',
+                                    borderRadius: 'var(--radius-full)',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                <Share size={14} /> 폴더 공유
+                            </button>
+                        )}
                         <button
                             onClick={onUploadClick}
                             style={{

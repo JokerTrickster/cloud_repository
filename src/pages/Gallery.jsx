@@ -864,6 +864,8 @@ const Gallery = () => {
                             onUploadClick={() => setShowUpload(true)}
                             onSelectionModeToggle={() => setIsSelectionMode(true)}
                             isSelectionMode={isSelectionMode}
+                            onShareFolder={() => handleShare('folder', currentFolder?.id, currentFolder?.folder_name)}
+                            currentFolder={currentFolder}
                         />
                         {showCalendar && (
                             <DateRangeCalendar
