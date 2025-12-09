@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Check, Trash2, FolderInput } from 'lucide-react';
+import { X, Check, Trash2, Folder } from 'lucide-react';
 
 const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onMoveToFolder }) => {
     useEffect(() => {
@@ -64,7 +64,7 @@ const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onM
                         disabled={selectedCount === 0}
                         style={{
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: selectedCount === 0 ? 'var(--text-tertiary)' : 'var(--secondary)',
+                            color: selectedCount === 0 ? 'var(--text-tertiary)' : '#F59E0B',
                             display: 'flex', alignItems: 'center', gap: '4px',
                             transition: 'color 0.2s',
                             pointerEvents: selectedCount === 0 ? 'none' : 'auto'
@@ -74,9 +74,9 @@ const SelectionActionBar = ({ selectedCount, onCancel, onDownload, onDelete, onM
                         <div style={{
                             padding: '8px',
                             borderRadius: '50%',
-                            background: selectedCount > 0 ? 'rgba(52, 168, 83, 0.1)' : 'transparent'
+                            background: selectedCount > 0 ? 'rgba(245, 158, 11, 0.1)' : 'transparent'
                         }}>
-                            <FolderInput size={20} />
+                            <Folder size={20} />
                         </div>
                     </button>
                 )}
