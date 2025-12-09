@@ -1,4 +1,25 @@
-import client from './client';
+import axios from 'axios';
+import { getAccessToken } from '../utils/auth';
+
+// Share API는 FILE_API_URL (18080 포트)을 사용하고 /api/v1 접두사 필요
+const shareClient = axios.create({
+  baseURL: `${import.meta.env.VITE_FILE_API_URL}/api/v1`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Access Token 주입
+shareClient.interceptors.request.use(
+  (config) => {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export const shareApi = {
   // ========== 폴더 공유 ==========
@@ -9,7 +30,7 @@ export const shareApi = {
    * @param {string[]} userEmails - 공유할 사용자 이메일 배열
    */
   shareFolderWithUsers: async (folderId, userEmails) => {
-    const response = await client.post(`/folders/${folderId}/share`, {
+    const response = await shareClient.post(`/folders/${folderId}/share`, {
       user_emails: userEmails
     });
     return response.data;
@@ -20,7 +41,7 @@ export const shareApi = {
    * @param {number} folderId - 폴더 ID
    */
   getFolderShares: async (folderId) => {
-    const response = await client.get(`/folders/${folderId}/shares`);
+    const response = await shareClient.get(`/folders/${folderId}/shares`);
     return response.data;
   },
 
@@ -30,7 +51,7 @@ export const shareApi = {
    * @param {number} userId - 공유 취소할 사용자 ID
    */
   revokeFolderShare: async (folderId, userId) => {
-    const response = await client.delete(`/folders/${folderId}/shares/${userId}`);
+    const response = await shareClient.delete(`/folders/${folderId}/shares/${userId}`);
     return response.data;
   },
 
@@ -38,31 +59,31 @@ export const shareApi = {
    * 나와 공유된 폴더 목록
    */
   getSharedWithMeFolders: async () => {
-    const response = await client.get('/folders/shared-with-me');
+    const response = await shareClient.get('/folders/shared-with-me');
     return response.data;
   },
 
   // ========== 파일 공유 ==========
 
   shareFileWithUsers: async (fileId, userEmails) => {
-    const response = await client.post(`/files/${fileId}/share`, {
+    const response = await shareClient.post(`/files/${fileId}/share`, {
       user_emails: userEmails
     });
     return response.data;
   },
 
   getFileShares: async (fileId) => {
-    const response = await client.get(`/files/${fileId}/shares`);
+    const response = await shareClient.get(`/files/${fileId}/shares`);
     return response.data;
   },
 
   revokeFileShare: async (fileId, userId) => {
-    const response = await client.delete(`/files/${fileId}/shares/${userId}`);
+    const response = await shareClient.delete(`/files/${fileId}/shares/${userId}`);
     return response.data;
   },
 
   getSharedWithMeFiles: async () => {
-    const response = await client.get('/files/shared-with-me');
+    const response = await shareClient.get('/files/shared-with-me');
     return response.data;
   }
 };
