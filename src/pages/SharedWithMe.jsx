@@ -25,8 +25,18 @@ const SharedWithMe = () => {
         shareApi.getSharedWithMeFiles()
       ]);
 
-      setSharedFolders(foldersResponse.folders || []);
-      setSharedFiles(filesResponse.files || []);
+      console.log('[SharedWithMe] Folders response:', foldersResponse);
+      console.log('[SharedWithMe] Files response:', filesResponse);
+
+      // 백엔드가 배열을 직접 반환하는 경우와 객체로 감싸서 반환하는 경우 모두 처리
+      const folders = Array.isArray(foldersResponse) ? foldersResponse : (foldersResponse.folders || foldersResponse.data || []);
+      const files = Array.isArray(filesResponse) ? filesResponse : (filesResponse.files || filesResponse.data || []);
+
+      console.log('[SharedWithMe] Parsed folders:', folders);
+      console.log('[SharedWithMe] Parsed files:', files);
+
+      setSharedFolders(folders);
+      setSharedFiles(files);
     } catch (err) {
       console.error('[SharedWithMe] Failed to load shared items:', err);
       const errorMsg = err.response?.data?.error || err.response?.data?.message || '공유 항목을 불러오는데 실패했습니다.';
@@ -215,7 +225,9 @@ const SharedWithMe = () => {
                       }}>
                         <User size={16} color="var(--text-secondary)" style={{ marginRight: '8px', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '500' }}>{folder.owner.name}</div>
+                          <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                            {folder.owner_name || folder.owner?.name || '알 수 없음'}
+                          </div>
                           <div style={{
                             fontSize: '12px',
                             color: 'var(--text-tertiary)',
@@ -223,7 +235,7 @@ const SharedWithMe = () => {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
                           }}>
-                            {folder.owner.email}
+                            {folder.owner_email || folder.owner?.email || ''}
                           </div>
                         </div>
                       </div>
@@ -340,7 +352,9 @@ const SharedWithMe = () => {
                       }}>
                         <User size={16} color="var(--text-secondary)" style={{ marginRight: '8px', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '500' }}>{file.owner.name}</div>
+                          <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                            {file.owner_name || file.owner?.name || '알 수 없음'}
+                          </div>
                           <div style={{
                             fontSize: '12px',
                             color: 'var(--text-tertiary)',
@@ -348,7 +362,7 @@ const SharedWithMe = () => {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
                           }}>
-                            {file.owner.email}
+                            {file.owner_email || file.owner?.email || ''}
                           </div>
                         </div>
                       </div>
