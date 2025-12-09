@@ -44,9 +44,12 @@ const GalleryToolbar = ({
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: '4px',
                             fontSize: '13px',
-                            fontWeight: '500'
+                            fontWeight: '500',
+                            minWidth: '40px',
+                            minHeight: '40px'
                         }}
                         title="폴더 메뉴"
                     >
