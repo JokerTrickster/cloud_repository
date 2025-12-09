@@ -295,35 +295,31 @@ const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchT
 
             {/* More Options Menu Button - Always Visible for Mobile Accessibility */}
             {!isSelectionMode && (
-                <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    zIndex: 20
-                }} onClick={e => e.stopPropagation()}>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (onOpenOptions) {
-                                onOpenOptions(file);
-                            }
-                        }}
-                        style={{
-                            background: 'rgba(0,0,0,0.6)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            borderRadius: '50%',
-                            width: '20px',
-                            height: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            backdropFilter: 'blur(4px)',
-                            color: 'white'
-                        }}
-                    >
-                        <MoreVertical size={12} />
-                    </button>
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenOptions) {
+                            onOpenOptions(file);
+                        }
+                    }}
+                    style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        zIndex: 20,
+                        cursor: 'pointer',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.3)',
+                        backdropFilter: 'blur(2px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    <MoreVertical size={12} color="white" strokeWidth={2} />
                 </div>
             )}
 
