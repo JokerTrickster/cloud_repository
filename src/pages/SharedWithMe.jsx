@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, User, Download, FolderOpen, Image, Video, Users } from 'lucide-react';
+import { Folder, File, User, Download, FolderOpen, Image, Video, Users, UserPlus, UserMinus, Trash2, X } from 'lucide-react';
 import { shareApi } from '../api/shareApi';
 import fileApi from '../api/fileApi';
+import ShareModal from '../components/ShareModal';
 
 const SharedWithMe = () => {
   const [viewMode, setViewMode] = useState('received'); // 'received' or 'shared'
@@ -17,6 +18,10 @@ const SharedWithMe = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Share management modal state
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null); // {type: 'folder'|'file', id, name}
 
   // Load items when view mode changes
   useEffect(() => {
@@ -82,6 +87,67 @@ const SharedWithMe = () => {
     } catch (err) {
       console.error('[SharedWithMe] Download failed:', err);
       alert('다운로드에 실패했습니다.');
+    }
+  };
+
+  // Open share management modal
+  const handleManageShare = (type, id, name) => {
+    setSelectedItem({ type, id, name });
+    setShareModalOpen(true);
+  };
+
+  // Remove specific user from share
+  const handleRemoveUser = async (userId, userName) => {
+    if (!selectedItem) return;
+
+    if (!confirm(`${userName}님과의 공유를 해제하시겠습니까?`)) return;
+
+    try {
+      if (selectedItem.type === 'folder') {
+        await shareApi.revokeFolderShare(selectedItem.id, userId);
+      } else {
+        await shareApi.revokeFileShare(selectedItem.id, userId);
+      }
+
+      alert('공유가 해제되었습니다.');
+
+      // Reload items
+      if (viewMode === 'shared') {
+        loadSharedItems();
+      }
+    } catch (err) {
+      console.error('[SharedWithMe] Failed to remove user:', err);
+      alert('공유 해제에 실패했습니다.');
+    }
+  };
+
+  // Unshare with all users
+  const handleUnshareAll = async (item) => {
+    const itemName = item.type === 'folder' ? item.folder_name : item.file_name;
+
+    if (!confirm(`"${itemName}"의 모든 공유를 해제하시겠습니까?`)) return;
+
+    try {
+      const sharedUsers = item.shared_with || [];
+
+      // Remove all users sequentially
+      for (const user of sharedUsers) {
+        if (item.type === 'folder') {
+          await shareApi.revokeFolderShare(item.id, user.id);
+        } else {
+          await shareApi.revokeFileShare(item.id, user.id);
+        }
+      }
+
+      alert('모든 공유가 해제되었습니다.');
+
+      // Reload items
+      if (viewMode === 'shared') {
+        loadSharedItems();
+      }
+    } catch (err) {
+      console.error('[SharedWithMe] Failed to unshare all:', err);
+      alert('공유 해제에 실패했습니다.');
     }
   };
 
@@ -361,8 +427,65 @@ const SharedWithMe = () => {
                               </div>
                             )}
                           </div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '12px' }}>
                             생성: {formatDate(folder.created_at)}
+                          </div>
+
+                          {/* 공유 관리 버튼들 */}
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleManageShare('folder', folder.id, folder.folder_name);
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <UserPlus size={14} />
+                              사용자 추가
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnshareAll({ ...folder, type: 'folder' });
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <Trash2 size={14} />
+                              전체 해제
+                            </button>
                           </div>
                         </>
                       )}
@@ -561,8 +684,65 @@ const SharedWithMe = () => {
                               </div>
                             )}
                           </div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '12px' }}>
                             생성: {formatDate(file.created_at)}
+                          </div>
+
+                          {/* 공유 관리 버튼들 */}
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleManageShare('file', file.id, file.file_name);
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <UserPlus size={14} />
+                              사용자 추가
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnshareAll({ ...file, type: 'file' });
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <Trash2 size={14} />
+                              전체 해제
+                            </button>
                           </div>
                         </>
                       )}
@@ -573,6 +753,23 @@ const SharedWithMe = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* ShareModal for adding users */}
+      {shareModalOpen && selectedItem && (
+        <ShareModal
+          type={selectedItem.type}
+          itemId={selectedItem.id}
+          itemName={selectedItem.name}
+          onClose={() => {
+            setShareModalOpen(false);
+            setSelectedItem(null);
+            // Reload items after modal closes
+            if (viewMode === 'shared') {
+              loadSharedItems();
+            }
+          }}
+        />
       )}
     </div>
   );
