@@ -39,6 +39,8 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
       setSharedUsers(response.shared_users || []);
     } catch (err) {
       console.error('[ShareModal] Failed to load shared users:', err);
+      // 에러 발생시 빈 배열로 초기화 (React 렌더링 에러 방지)
+      setSharedUsers([]);
       const errorMsg = err.response?.data?.error || err.response?.data?.message || '공유 목록을 불러오는데 실패했습니다.';
       setError(errorMsg);
     } finally {
