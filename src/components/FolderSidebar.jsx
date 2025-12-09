@@ -353,8 +353,7 @@ const FolderSidebar = ({
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
-                  paddingBottom: 'max(20px, env(safe-area-inset-bottom))'
+                  borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0'
                 } : {
                   top: contextMenu.y,
                   left: contextMenu.x,
@@ -365,9 +364,8 @@ const FolderSidebar = ({
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 zIndex: 1000,
                 minWidth: isMobile ? 'auto' : '180px',
-                overflow: 'visible',
-                maxHeight: isMobile ? '80vh' : 'auto',
-                overflowY: isMobile ? 'auto' : 'visible'
+                overflow: 'hidden',
+                maxHeight: isMobile ? '80vh' : 'auto'
               }}
             >
               <div
@@ -458,6 +456,14 @@ const FolderSidebar = ({
                 <Trash2 size={isMobile ? 20 : 16} />
                 삭제
               </div>
+
+              {/* Mobile bottom spacer for safe area */}
+              {isMobile && (
+                <div style={{
+                  height: 'max(20px, env(safe-area-inset-bottom))',
+                  background: 'transparent'
+                }} />
+              )}
             </div>
           </>
         )}
