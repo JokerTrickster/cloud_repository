@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, Plus, MoreVertical, Edit2, Trash2, FolderPlus, X } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, Plus, MoreVertical, Edit2, Trash2, FolderPlus, X, Share } from 'lucide-react';
 
 /**
  * FolderSidebar - 계층적 폴더 구조 표시 및 관리
@@ -11,6 +11,7 @@ import { Folder, FolderOpen, ChevronRight, ChevronDown, Plus, MoreVertical, Edit
  * @param {Function} onRenameFolder - 폴더 이름 변경 콜백
  * @param {Function} onDeleteFolder - 폴더 삭제 콜백
  * @param {Function} onMoveFolder - 폴더 이동 콜백
+ * @param {Function} onShare - 폴더 공유 콜백
  * @param {boolean} isOpen - 모바일에서 사이드바 열림 상태
  * @param {Function} onClose - 모바일에서 사이드바 닫기 콜백
  */
@@ -22,6 +23,7 @@ const FolderSidebar = ({
   onRenameFolder,
   onDeleteFolder,
   onMoveFolder,
+  onShare,
   isOpen = true,
   onClose
 }) => {
@@ -389,6 +391,30 @@ const FolderSidebar = ({
                 <Plus size={isMobile ? 20 : 16} />
                 하위 폴더 생성
               </div>
+
+              {onShare && (
+                <div
+                  onClick={() => {
+                    onShare('folder', contextMenu.folder.id, contextMenu.folder.folder_name);
+                    closeContextMenu();
+                  }}
+                  style={{
+                    padding: isMobile ? '16px 20px' : '10px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    transition: 'background 0.2s',
+                    minHeight: isMobile ? '56px' : 'auto'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <Share size={isMobile ? 20 : 16} />
+                  공유
+                </div>
+              )}
 
               <div
                 onClick={() => {

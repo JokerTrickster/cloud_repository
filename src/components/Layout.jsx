@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Cloud, Grid, User } from 'lucide-react';
+import { Cloud, Grid, User, Share2 } from 'lucide-react';
 
 const Layout = () => {
     const location = useLocation();
@@ -8,6 +8,7 @@ const Layout = () => {
 
     const navItems = [
         { icon: Grid, label: '갤러리', path: '/gallery' },
+        { icon: Share2, label: '공유된 항목', path: '/shared-with-me' },
         { icon: User, label: '마이페이지', path: '/mypage' },
     ];
 

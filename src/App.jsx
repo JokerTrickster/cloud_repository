@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Gallery from './pages/Gallery';
 import MyPage from './pages/MyPage';
+import SharedWithMe from './pages/SharedWithMe';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { WebSocketProvider } from './context/WebSocketContext';
@@ -20,6 +21,7 @@ function App() {
             </ProtectedRoute>
           }>
             <Route path="/gallery" element={<Gallery />} />
+            <Route path="/shared-with-me" element={<SharedWithMe />} />
             <Route path="/mypage" element={<MyPage />} />
           </Route>
           <Route path="/" element={<Navigate to="/gallery" replace />} />

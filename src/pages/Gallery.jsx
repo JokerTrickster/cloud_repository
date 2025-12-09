@@ -18,6 +18,7 @@ import DebugLogger from '../components/DebugLogger';
 import FolderSidebar from '../components/FolderSidebar';
 import CreateFolderModal from '../components/CreateFolderModal';
 import MoveFilesModal from '../components/MoveFilesModal';
+import ShareModal from '../components/ShareModal';
 import { useGalleryFiles } from '../hooks/useGalleryFiles';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 
@@ -49,6 +50,10 @@ const Gallery = () => {
     const [editingFolder, setEditingFolder] = useState(null);
     const [createFolderParentId, setCreateFolderParentId] = useState(null);
     const [isFolderSidebarOpen, setIsFolderSidebarOpen] = useState(false); // Mobile sidebar state
+
+    // Share management state
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [shareTarget, setShareTarget] = useState(null); // { type, id, name }
 
     // Load files from API
     useEffect(() => {
@@ -406,8 +411,14 @@ const Gallery = () => {
         }
     };
 
+    // Share handler - 폴더/파일 공유 모달 열기
+    const handleShare = (type, id, name) => {
+        setShareTarget({ type, id, name });
+        setShowShareModal(true);
+    };
+
     // Web Share API - 모바일에서 사진/동영상 공유
-    const handleShare = async (file) => {
+    const handleWebShare = async (file) => {
         try {
             // Check if Web Share API is supported
             if (!navigator.share) {
@@ -745,6 +756,7 @@ const Gallery = () => {
                 onCreateFolder={handleCreateFolder}
                 onRenameFolder={handleRenameFolder}
                 onDeleteFolder={handleDeleteFolder}
+                onShare={handleShare}
                 isOpen={isFolderSidebarOpen}
                 onClose={() => setIsFolderSidebarOpen(false)}
             />
@@ -920,7 +932,7 @@ const Gallery = () => {
                 <VideoPlayerModal
                     video={playingVideo}
                     onClose={() => setPlayingVideo(null)}
-                    onShare={handleShare}
+                    onShare={handleWebShare}
                     onDownload={handleDownloadFile}
                 />
 
@@ -928,7 +940,7 @@ const Gallery = () => {
                 <ImageViewerModal
                     image={viewingImage}
                     onClose={() => setViewingImage(null)}
-                    onShare={handleShare}
+                    onShare={handleWebShare}
                     onDownload={handleDownloadFile}
                 />
 
@@ -1085,6 +1097,20 @@ const Gallery = () => {
                         folders={folders}
                         onClose={() => setShowMoveFiles(false)}
                         onMove={handleMoveFiles}
+                    />
+                )}
+
+                {/* Share Modal */}
+                {showShareModal && (
+                    <ShareModal
+                        isOpen={showShareModal}
+                        onClose={() => {
+                            setShowShareModal(false);
+                            setShareTarget(null);
+                        }}
+                        resourceType={shareTarget?.type}
+                        resourceId={shareTarget?.id}
+                        resourceName={shareTarget?.name}
                     />
                 )}
 
