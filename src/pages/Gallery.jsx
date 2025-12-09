@@ -852,8 +852,6 @@ const Gallery = () => {
                             onUploadClick={() => setShowUpload(true)}
                             onSelectionModeToggle={() => setIsSelectionMode(true)}
                             isSelectionMode={isSelectionMode}
-                            onFolderMenuClick={() => setIsFolderSidebarOpen(true)}
-                            currentFolder={currentFolder}
                         />
                         {showCalendar && (
                             <DateRangeCalendar
