@@ -377,8 +377,20 @@ const SharedWithMe = () => {
                           }}>
                             <User size={16} color="var(--text-secondary)" style={{ marginRight: '8px', flexShrink: 0 }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '13px', fontWeight: '500' }}>
-                                {folder.owner_name || folder.owner?.name || '알 수 없음'}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                                  {folder.owner_name || folder.owner?.name || '알 수 없음'}
+                                </div>
+                                <span style={{
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: folder.permission === 'write' ? '#DCFCE7' : '#F3F4F6',
+                                  color: folder.permission === 'write' ? '#16A34A' : '#6B7280',
+                                  fontWeight: '600'
+                                }}>
+                                  {folder.permission === 'write' ? '읽기/쓰기' : '읽기 전용'}
+                                </span>
                               </div>
                               <div style={{
                                 fontSize: '12px',
@@ -391,9 +403,45 @@ const SharedWithMe = () => {
                               </div>
                             </div>
                           </div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: folder.permission === 'write' ? '12px' : '0' }}>
                             공유: {formatDate(folder.shared_at)}
                           </div>
+
+                          {/* 업로드 버튼 (write 권한만) */}
+                          {folder.permission === 'write' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                alert('공유 폴더에 파일 업로드 기능은 곧 추가됩니다.');
+                                // TODO: 업로드 모달 구현
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                              </svg>
+                              파일 업로드
+                            </button>
+                          )}
                         </>
                       )}
 
@@ -605,8 +653,20 @@ const SharedWithMe = () => {
                           }}>
                             <User size={16} color="var(--text-secondary)" style={{ marginRight: '8px', flexShrink: 0 }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '13px', fontWeight: '500' }}>
-                                {file.owner_name || file.owner?.name || '알 수 없음'}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '500' }}>
+                                  {file.owner_name || file.owner?.name || '알 수 없음'}
+                                </div>
+                                <span style={{
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: file.permission === 'write' ? '#DCFCE7' : '#F3F4F6',
+                                  color: file.permission === 'write' ? '#16A34A' : '#6B7280',
+                                  fontWeight: '600'
+                                }}>
+                                  {file.permission === 'write' ? '읽기/쓰기' : '읽기 전용'}
+                                </span>
                               </div>
                               <div style={{
                                 fontSize: '12px',

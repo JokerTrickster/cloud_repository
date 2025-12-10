@@ -13,6 +13,7 @@ import { shareApi } from '../api/shareApi';
  */
 const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName }) => {
   const [emailInput, setEmailInput] = useState('');
+  const [permission, setPermission] = useState('read'); // 권한 선택: "read" | "write"
   const [sharedUsers, setSharedUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingShares, setLoadingShares] = useState(false);
@@ -86,9 +87,9 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
     try {
       let response;
       if (resourceType === 'folder') {
-        response = await shareApi.shareFolderWithUsers(resourceId, emails);
+        response = await shareApi.shareFolderWithUsers(resourceId, emails, permission);
       } else {
-        response = await shareApi.shareFileWithUsers(resourceId, emails);
+        response = await shareApi.shareFileWithUsers(resourceId, emails, permission);
       }
 
       // 성공 메시지
@@ -101,6 +102,7 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
 
       // 입력 초기화 및 목록 새로고침
       setEmailInput('');
+      setPermission('read'); // 권한도 초기화
       await loadSharedUsers();
     } catch (err) {
       console.error('[ShareModal] Failed to share:', err);
@@ -284,6 +286,64 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
               추가
             </button>
           </div>
+
+          {/* 권한 선택 */}
+          <div style={{ marginTop: '12px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '500', marginBottom: '8px', display: 'block', color: 'var(--text-primary)' }}>
+              접근 권한
+            </label>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                border: `2px solid ${permission === 'read' ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                background: permission === 'read' ? 'var(--primary-10)' : 'transparent',
+                transition: 'all 0.2s',
+                flex: 1
+              }}>
+                <input
+                  type="radio"
+                  value="read"
+                  checked={permission === 'read'}
+                  onChange={(e) => setPermission(e.target.value)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '500' }}>읽기 전용</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>다운로드만 가능</div>
+                </div>
+              </label>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                border: `2px solid ${permission === 'write' ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                background: permission === 'write' ? 'var(--primary-10)' : 'transparent',
+                transition: 'all 0.2s',
+                flex: 1
+              }}>
+                <input
+                  type="radio"
+                  value="write"
+                  checked={permission === 'write'}
+                  onChange={(e) => setPermission(e.target.value)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '500' }}>읽기/쓰기</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>업로드 + 다운로드</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
             여러 이메일을 쉼표(,)로 구분하여 입력할 수 있습니다.
           </div>
@@ -325,7 +385,19 @@ const ShareModal = ({ isOpen, onClose, resourceType, resourceId, resourceName })
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: '500' }}>{user.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500' }}>{user.name}</div>
+                      <span style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: user.permission === 'write' ? '#DCFCE7' : '#F3F4F6',
+                        color: user.permission === 'write' ? '#16A34A' : '#6B7280',
+                        fontWeight: '600'
+                      }}>
+                        {user.permission === 'write' ? '읽기/쓰기' : '읽기 전용'}
+                      </span>
+                    </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       {user.email}
                     </div>

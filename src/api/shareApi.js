@@ -28,10 +28,12 @@ export const shareApi = {
    * 폴더를 사용자들과 공유
    * @param {number} folderId - 폴더 ID
    * @param {string[]} userEmails - 공유할 사용자 이메일 배열
+   * @param {string} permission - 권한 ("read" | "write", 기본: "read")
    */
-  shareFolderWithUsers: async (folderId, userEmails) => {
+  shareFolderWithUsers: async (folderId, userEmails, permission = 'read') => {
     const response = await shareClient.post(`/folders/${folderId}/share`, {
-      user_emails: userEmails
+      user_emails: userEmails,
+      permission: permission
     });
     return response.data;
   },
@@ -65,9 +67,16 @@ export const shareApi = {
 
   // ========== 파일 공유 ==========
 
-  shareFileWithUsers: async (fileId, userEmails) => {
+  /**
+   * 파일을 사용자들과 공유
+   * @param {number} fileId - 파일 ID
+   * @param {string[]} userEmails - 공유할 사용자 이메일 배열
+   * @param {string} permission - 권한 ("read" | "write", 기본: "read")
+   */
+  shareFileWithUsers: async (fileId, userEmails, permission = 'read') => {
     const response = await shareClient.post(`/files/${fileId}/share`, {
-      user_emails: userEmails
+      user_emails: userEmails,
+      permission: permission
     });
     return response.data;
   },
