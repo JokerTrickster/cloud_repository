@@ -1,25 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, FolderOpen, Image, Video, File as FileIcon } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon } from 'lucide-react';
 import folderApi from '../api/folderApi';
 import fileApi from '../api/fileApi';
+import SelectionActionBar from '../components/SelectionActionBar';
+import FileUpload from '../components/FileUpload';
+import UploadProgressModal from '../components/UploadProgressModal';
+import GalleryItem from '../components/GalleryItem';
+import VideoPlayerModal from '../components/VideoPlayerModal';
+import ImageViewerModal from '../components/ImageViewerModal';
 import './SharedFolderView.css';
 
+/**
+ * SharedFolderView - Gallery-style shared folder browsing
+ * Features: 5-column grid, multi-select, batch download, upload
+ */
 const SharedFolderView = () => {
   const { folderId } = useParams();
   const navigate = useNavigate();
 
+  // Folder and files state
   const [folder, setFolder] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [imageErrors, setImageErrors] = useState(new Set());
 
-  // Load folder info and files
+  // Selection state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
+  // Upload state
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadState, setUploadState] = useState(null);
+
+  // Media viewer state
+  const [playingVideo, setPlayingVideo] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
+
+  // Load folder data on mount
   useEffect(() => {
     loadFolderData();
   }, [folderId]);
 
+  // Set up media player callbacks
+  useEffect(() => {
+    window.openVideoPlayer = (file) => {
+      setPlayingVideo(file);
+    };
+    window.openImageViewer = (file) => {
+      setViewingImage(file);
+    };
+    return () => {
+      window.openVideoPlayer = null;
+      window.openImageViewer = null;
+    };
+  }, []);
+
+  // Load folder info and files
   const loadFolderData = async () => {
     setLoading(true);
     setError(null);
@@ -31,13 +68,28 @@ const SharedFolderView = () => {
         ? filesResponse
         : (filesResponse.files || filesResponse.data || []);
 
-      setFiles(filesList);
+      // Transform files to Gallery format
+      const transformedFiles = filesList.map(file => ({
+        id: file.id,
+        name: file.file_name,
+        type: file.file_type, // 'image' or 'video'
+        url: file.thumbnail_url || file.url,
+        originalUrl: file.url,
+        thumbnail_url: file.thumbnail_url,
+        date: file.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        tags: file.tags || [],
+        duration: file.duration,
+        processing_status: file.processing_status,
+        isFavorite: file.is_favorite || false
+      }));
 
-      // Set folder name (from first file or use ID)
+      setFiles(transformedFiles);
+
+      // Set folder name
       if (filesList.length > 0) {
         setFolder({
           id: folderId,
-          name: `공유 폴더 ${folderId}` // We'll get the real name from the folder
+          name: `공유 폴더 ${folderId}`
         });
       } else {
         setFolder({
@@ -53,116 +105,141 @@ const SharedFolderView = () => {
     }
   };
 
-  // Download file
-  const handleDownload = async (file) => {
+  // Toggle file selection
+  const toggleSelection = (id) => {
+    if (selectedFiles.includes(id)) {
+      setSelectedFiles(selectedFiles.filter(fid => fid !== id));
+    } else {
+      if (selectedFiles.length >= 30) {
+        alert('최대 30개까지만 선택할 수 있습니다.');
+        return;
+      }
+      setSelectedFiles([...selectedFiles, id]);
+    }
+  };
+
+  // Batch download handler
+  const handleBatchDownload = async () => {
     try {
-      await fileApi.downloadFile(file.id, file.file_name);
+      await fileApi.downloadBatchFiles(selectedFiles);
+      setSelectedFiles([]);
+      setIsSelectionMode(false);
     } catch (err) {
       console.error('[SharedFolderView] Download failed:', err);
       alert('다운로드에 실패했습니다.');
     }
   };
 
-  // Handle image load error
-  const handleImageError = (fileId) => {
-    setImageErrors(prev => new Set([...prev, fileId]));
+  // Delete handler (disabled for shared folders)
+  const handleDelete = async () => {
+    alert('공유 폴더에서는 파일을 삭제할 수 없습니다.');
   };
 
-  // Format file size
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '0 B';
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  // Upload start handler
+  const handleUploadStart = (files, fileTags, uploadFn) => {
+    console.log('[SharedFolderView] Starting upload for', files.length, 'files');
+
+    // Initialize upload state
+    setUploadState({
+      files: files.map(f => ({ name: f.name, size: f.size })),
+      progress: {},
+      total: files.length,
+      completed: 0,
+      failed: 0,
+      done: false
+    });
+
+    // Close upload modal
+    setShowUpload(false);
+
+    // Execute upload in background
+    try {
+      uploadFn(
+        (fileIndex, progress, status) => {
+          setUploadState(prev => {
+            if (!prev) return null;
+
+            const newProgress = { ...prev.progress, [fileIndex]: progress };
+            const completedCount = Object.values(newProgress).filter(p => p === 100).length;
+
+            return {
+              ...prev,
+              progress: newProgress,
+              completed: completedCount
+            };
+          });
+        }
+      ).then(results => {
+        console.log('[SharedFolderView] Upload completed:', results);
+
+        const successCount = results.filter(r => r.file_id).length;
+        const failedCount = results.filter(r => !r.file_id).length;
+
+        setUploadState(prev => prev ? {
+          ...prev,
+          completed: successCount,
+          failed: failedCount,
+          done: true
+        } : null);
+
+        // Reload files
+        loadFolderData();
+
+        // Auto-close after 5 seconds
+        setTimeout(() => {
+          setUploadState(null);
+        }, 5000);
+      }).catch(error => {
+        console.error('[SharedFolderView] Upload failed:', error);
+        setUploadState(prev => prev ? {
+          ...prev,
+          error: error.message,
+          done: true,
+          failed: prev.total
+        } : null);
+
+        setTimeout(() => {
+          setUploadState(null);
+        }, 5000);
+      });
+    } catch (syncError) {
+      console.error('[SharedFolderView] Sync error:', syncError);
+      setUploadState(prev => prev ? {
+        ...prev,
+        error: syncError.message,
+        done: true,
+        failed: prev.total
+      } : null);
+    }
   };
 
-  // Get file icon component
-  const getFileIcon = (fileType, size = 48) => {
-    const iconProps = { size, strokeWidth: 1.5 };
-    if (fileType === 'image') return <Image {...iconProps} />;
-    if (fileType === 'video') return <Video {...iconProps} />;
-    return <FileIcon {...iconProps} />;
-  };
-
-  // Get file type background color
-  const getFileTypeColor = (fileType) => {
-    if (fileType === 'image') return '#E8F0FE';
-    if (fileType === 'video') return '#FEF7E0';
-    return '#F1F3F4';
-  };
-
-  // Get file type icon color
-  const getFileTypeIconColor = (fileType) => {
-    if (fileType === 'image') return '#1967D2';
-    if (fileType === 'video') return '#E37400';
-    return '#5F6368';
-  };
-
-  // Render file card
-  const renderFileCard = (file) => {
-    const hasImageError = imageErrors.has(file.id);
-    const showFallback = !file.thumbnail_url || hasImageError;
-
-    return (
-      <div key={file.id} className="file-card">
-        {/* Thumbnail Area */}
-        <div className="file-thumbnail-container">
-          {showFallback ? (
-            <div
-              className="file-thumbnail-fallback"
-              style={{
-                backgroundColor: getFileTypeColor(file.file_type),
-                color: getFileTypeIconColor(file.file_type)
-              }}
-            >
-              {getFileIcon(file.file_type, 56)}
-            </div>
-          ) : (
-            <img
-              src={file.thumbnail_url}
-              alt={file.file_name}
-              className="file-thumbnail-image"
-              onError={() => handleImageError(file.id)}
-              loading="lazy"
-            />
-          )}
-        </div>
-
-        {/* File Info Area */}
-        <div className="file-info">
-          <div className="file-details">
-            <div className="file-icon-small" style={{ color: getFileTypeIconColor(file.file_type) }}>
-              {getFileIcon(file.file_type, 18)}
-            </div>
-            <div className="file-text">
-              <div className="file-name" title={file.file_name}>
-                {file.file_name}
-              </div>
-              <div className="file-size">
-                {formatFileSize(file.file_size)}
-              </div>
-            </div>
-          </div>
-
-          {/* Download Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDownload(file);
-            }}
-            className="download-button"
-            aria-label={`${file.file_name} 다운로드`}
-          >
-            <Download size={16} />
-            <span>다운로드</span>
-          </button>
-        </div>
-      </div>
-    );
-  };
+  // Group files by date
+  const groupedFiles = useMemo(() => {
+    return files.reduce((acc, file) => {
+      const date = file.date;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(file);
+      return acc;
+    }, {});
+  }, [files]);
 
   return (
     <div className="shared-folder-view">
+      {/* Fixed 5-column grid CSS */}
+      <style>{`
+        .gallery-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 2px;
+        }
+        @media (max-width: 768px) {
+          .gallery-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+          }
+        }
+      `}</style>
+
       {/* Header */}
       <div className="shared-folder-header">
         {/* Back Button */}
@@ -171,22 +248,34 @@ const SharedFolderView = () => {
           className="back-button"
         >
           <ArrowLeft size={18} />
-          <span className="back-button-text">공유 관리로 돌아가기</span>
+          <span>공유 관리로 돌아가기</span>
         </button>
 
-        {/* Title Section */}
+        {/* Title */}
         <div className="title-section">
-          <div className="folder-icon">
-            <FolderOpen size={32} />
-          </div>
-          <div className="title-text">
-            <h1 className="folder-title">
-              {folder?.name || '로딩 중...'}
-            </h1>
-            <p className="folder-subtitle">
-              {files.length}개 파일
-            </p>
-          </div>
+          <h1 className="folder-title">
+            {folder?.name || '로딩 중...'}
+          </h1>
+          <p className="folder-subtitle">
+            {files.length}개 파일
+          </p>
+        </div>
+
+        {/* Toolbar */}
+        <div className="toolbar">
+          <button
+            onClick={() => setShowUpload(true)}
+            className="toolbar-button upload-button"
+          >
+            <UploadIcon size={18} />
+            <span>업로드</span>
+          </button>
+          <button
+            onClick={() => setIsSelectionMode(true)}
+            className="toolbar-button select-button"
+          >
+            선택
+          </button>
         </div>
       </div>
 
@@ -205,16 +294,103 @@ const SharedFolderView = () => {
           </div>
         ) : files.length === 0 ? (
           <div className="empty-state">
-            <FileIcon size={64} className="empty-icon" />
+            <div className="empty-icon">📁</div>
             <div className="empty-title">폴더가 비어있습니다</div>
-            <div className="empty-subtitle">이 폴더에는 아직 파일이 없습니다</div>
+            <div className="empty-subtitle">업로드 버튼을 눌러 파일을 추가하세요</div>
           </div>
         ) : (
-          <div className="files-grid">
-            {files.map(renderFileCard)}
+          <div>
+            {Object.keys(groupedFiles).sort((a, b) => b.localeCompare(a)).map(date => (
+              <div key={date} style={{ marginBottom: '24px' }}>
+                {/* Date Header */}
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '8px',
+                  padding: '0 4px'
+                }}>
+                  {date}
+                </div>
+
+                {/* Gallery Grid */}
+                <div className="gallery-grid">
+                  {groupedFiles[date].map((file, index) => (
+                    <GalleryItem
+                      key={file.id}
+                      file={file}
+                      isSelectionMode={isSelectionMode}
+                      isSelected={selectedFiles.includes(file.id)}
+                      onToggle={toggleSelection}
+                      searchTerm=""
+                      index={index}
+                      onOpenOptions={() => {}} // No options in shared view
+                      onToggleFavorite={() => {}} // No favorites in shared view
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* File Upload Modal */}
+      {showUpload && (
+        <FileUpload
+          onUploadStart={handleUploadStart}
+          onClose={() => setShowUpload(false)}
+        />
+      )}
+
+      {/* Upload Progress Modal */}
+      <UploadProgressModal
+        uploadState={uploadState}
+        onClose={() => setUploadState(null)}
+      />
+
+      {/* Selection Action Bar */}
+      {isSelectionMode && (
+        <SelectionActionBar
+          selectedCount={selectedFiles.length}
+          onCancel={() => {
+            setIsSelectionMode(false);
+            setSelectedFiles([]);
+          }}
+          onDownload={handleBatchDownload}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* Video Player Modal */}
+      <VideoPlayerModal
+        video={playingVideo}
+        onClose={() => setPlayingVideo(null)}
+        onShare={() => {}}
+        onDownload={async (file) => {
+          try {
+            await fileApi.downloadFile(file.id, file.name);
+          } catch (error) {
+            console.error('Download failed:', error);
+            alert('다운로드에 실패했습니다.');
+          }
+        }}
+      />
+
+      {/* Image Viewer Modal */}
+      <ImageViewerModal
+        image={viewingImage}
+        onClose={() => setViewingImage(null)}
+        onShare={() => {}}
+        onDownload={async (file) => {
+          try {
+            await fileApi.downloadFile(file.id, file.name);
+          } catch (error) {
+            console.error('Download failed:', error);
+            alert('다운로드에 실패했습니다.');
+          }
+        }}
+      />
     </div>
   );
 };
