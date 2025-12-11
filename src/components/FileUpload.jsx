@@ -245,9 +245,10 @@ const FileUpload = ({ onUploadStart, onClose }) => {
                 파일을 드래그하거나 클릭하여 선택하세요
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                이미지: JPG, PNG, GIF, WebP<br />
-                동영상: MP4, WebM, AVI, MOV<br />
-                대용량 파일 지원 (5GB 이상 자동 멀티파트 업로드)<br />
+                📸 모든 이미지 포맷 지원 (JPG, PNG, GIF, WebP, HEIC 등)<br />
+                🎬 모든 동영상 포맷 지원 (MP4, MOV, WebM, AVI 등)<br />
+                💾 대용량 파일 지원 (5GB 이상 자동 멀티파트 업로드)<br />
+                📱 아이폰 사진/영상 변환 없이 바로 업로드 가능<br />
                 최대 30개까지 선택 가능
               </p>
             </div>

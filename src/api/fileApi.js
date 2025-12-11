@@ -639,14 +639,6 @@ const fileApi = {
  */
 export const fileValidation = {
   /**
-   * 허용된 MIME 타입
-   */
-  ALLOWED_TYPES: {
-    image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    video: ['video/mp4', 'video/webm', 'video/x-msvideo', 'video/quicktime'],
-  },
-
-  /**
    * 최대 파일 크기 (무제한)
    * 멀티파트 업로드로 5GB 이상 파일도 지원
    * 실제 제한은 브라우저 메모리와 네트워크 환경에 의존
@@ -654,17 +646,15 @@ export const fileValidation = {
   MAX_FILE_SIZE: Infinity, // No limit with multipart upload
 
   /**
-   * 파일 타입 검증
+   * 파일 타입 검증 - 모든 이미지와 비디오 파일 허용
+   * 아이폰 포맷 포함: HEIC/HEIF (이미지), MOV/M4V (비디오)
    *
    * @param {File} file
    * @returns {boolean}
    */
   isValidType(file) {
-    const allAllowedTypes = [
-      ...this.ALLOWED_TYPES.image,
-      ...this.ALLOWED_TYPES.video,
-    ];
-    return allAllowedTypes.includes(file.type);
+    // 모든 이미지와 비디오 MIME 타입 허용
+    return file.type.startsWith('image/') || file.type.startsWith('video/');
   },
 
   /**
@@ -701,14 +691,14 @@ export const fileValidation = {
     if (!this.isValidType(file)) {
       return {
         valid: false,
-        error: `지원하지 않는 파일 형식입니다. (${file.type})`,
+        error: `이미지 또는 동영상 파일만 업로드할 수 있습니다. (현재: ${file.type || '알 수 없는 형식'})`,
       };
     }
 
     if (!this.isValidSize(file)) {
       return {
         valid: false,
-        error: `파일 크기가 너무 큽니다. (${this.formatFileSize(file.size)} / 최대 5GB)`,
+        error: `파일 크기가 너무 큽니다. (${this.formatFileSize(file.size)})`,
       };
     }
 
