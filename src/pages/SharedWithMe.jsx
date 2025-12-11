@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Folder, File, User, Download, FolderOpen, Image, Video, Users, UserPlus, UserMinus, Trash2, X } from 'lucide-react';
 import { shareApi } from '../api/shareApi';
 import fileApi from '../api/fileApi';
-import folderApi from '../api/folderApi';
 import ShareModal from '../components/ShareModal';
 
 const SharedWithMe = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('received'); // 'received' or 'shared'
   const [activeTab, setActiveTab] = useState('folders'); // 'folders' or 'files'
 
@@ -23,12 +24,6 @@ const SharedWithMe = () => {
   // Share management modal state
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null); // {type: 'folder'|'file', id, name}
-
-  // Folder files modal state
-  const [folderFilesModalOpen, setFolderFilesModalOpen] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState(null); // {id, name, permission}
-  const [folderFiles, setFolderFiles] = useState([]);
-  const [loadingFolderFiles, setLoadingFolderFiles] = useState(false);
 
   // Load items when view mode changes
   useEffect(() => {
@@ -98,25 +93,8 @@ const SharedWithMe = () => {
   };
 
   // Open folder to view files
-  const handleOpenFolder = async (folder) => {
-    setSelectedFolder({
-      id: folder.id,
-      name: folder.folder_name,
-      permission: folder.permission
-    });
-    setFolderFilesModalOpen(true);
-    setLoadingFolderFiles(true);
-    setFolderFiles([]);
-
-    try {
-      const files = await folderApi.getFolderFiles(folder.id);
-      setFolderFiles(Array.isArray(files) ? files : (files.files || files.data || []));
-    } catch (err) {
-      console.error('[SharedWithMe] Failed to load folder files:', err);
-      alert('폴더 파일 목록을 불러오는데 실패했습니다.');
-    } finally {
-      setLoadingFolderFiles(false);
-    }
+  const handleOpenFolder = (folder) => {
+    navigate(`/shared-folder/${folder.id}`);
   };
 
   // Open share management modal
@@ -867,224 +845,6 @@ const SharedWithMe = () => {
             }
           }}
         />
-      )}
-
-      {/* Folder Files Modal */}
-      {folderFilesModalOpen && selectedFolder && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}
-        onClick={() => setFolderFilesModalOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--surface)',
-              borderRadius: 'var(--radius-lg)',
-              width: '90%',
-              maxWidth: '1000px',
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}
-          >
-            {/* Modal Header */}
-            <div style={{
-              padding: '20px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <FolderOpen size={24} color="var(--primary)" />
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
-                    {selectedFolder.name}
-                  </h2>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    {folderFiles.length}개 파일
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setFolderFilesModalOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  color: 'var(--text-secondary)'
-                }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '20px'
-            }}>
-              {loadingFolderFiles ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '80px 20px',
-                  color: 'var(--text-tertiary)',
-                  fontSize: '14px'
-                }}>
-                  로딩 중...
-                </div>
-              ) : folderFiles.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '80px 20px',
-                  color: 'var(--text-tertiary)',
-                  fontSize: '14px'
-                }}>
-                  <File size={64} color="var(--text-tertiary)" style={{ marginBottom: '16px', opacity: 0.3 }} />
-                  <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                    폴더가 비어있습니다
-                  </div>
-                  <div>
-                    이 폴더에는 아직 파일이 없습니다
-                  </div>
-                </div>
-              ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: '16px'
-                }}>
-                  {folderFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      style={{
-                        padding: '16px',
-                        background: 'var(--background)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-md)',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                        e.currentTarget.style.borderColor = 'var(--primary)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                      }}
-                    >
-                      {/* 파일 썸네일 */}
-                      {file.thumbnail_url ? (
-                        <div style={{
-                          width: '100%',
-                          height: '120px',
-                          marginBottom: '12px',
-                          borderRadius: 'var(--radius-sm)',
-                          overflow: 'hidden',
-                          background: 'var(--surface)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <img
-                            src={file.thumbnail_url}
-                            alt={file.file_name}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '120px',
-                          marginBottom: '12px',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'var(--surface)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {file.file_type === 'image' ? (
-                            <Image size={48} color="var(--text-tertiary)" style={{ opacity: 0.3 }} />
-                          ) : file.file_type === 'video' ? (
-                            <Video size={48} color="var(--text-tertiary)" style={{ opacity: 0.3 }} />
-                          ) : (
-                            <File size={48} color="var(--text-tertiary)" style={{ opacity: 0.3 }} />
-                          )}
-                        </div>
-                      )}
-
-                      {/* 파일 정보 */}
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        marginBottom: '4px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: 'var(--text-primary)'
-                      }}
-                      title={file.file_name}
-                      >
-                        {file.file_name}
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        color: 'var(--text-tertiary)',
-                        marginBottom: '12px'
-                      }}>
-                        {formatFileSize(file.file_size)}
-                      </div>
-
-                      {/* 다운로드 버튼 */}
-                      <button
-                        onClick={() => handleDownloadFile(file)}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          background: 'var(--primary)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          transition: 'opacity 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                      >
-                        <Download size={14} />
-                        다운로드
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
