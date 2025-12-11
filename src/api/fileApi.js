@@ -643,7 +643,7 @@ export const fileValidation = {
    */
   ALLOWED_TYPES: {
     image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    video: ['video/mp4', 'video/webm', 'video/avi', 'video/mov'],
+    video: ['video/mp4', 'video/webm', 'video/x-msvideo', 'video/quicktime'],
   },
 
   /**
