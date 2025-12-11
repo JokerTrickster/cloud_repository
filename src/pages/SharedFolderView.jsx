@@ -33,6 +33,9 @@ const SharedFolderView = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadState, setUploadState] = useState(null);
 
+  // Download state
+  const [downloadState, setDownloadState] = useState(null);
+
   // Media viewer state
   const [playingVideo, setPlayingVideo] = useState(null);
   const [viewingImage, setViewingImage] = useState(null);
@@ -120,13 +123,55 @@ const SharedFolderView = () => {
 
   // Batch download handler
   const handleBatchDownload = async () => {
+    // Get selected file names for display
+    const selectedFileObjects = files.filter(f => selectedFiles.includes(f.id));
+
+    // Initialize download state
+    setDownloadState({
+      files: selectedFileObjects.map(f => ({ id: f.id, name: f.name })),
+      total: selectedFiles.length,
+      completed: 0,
+      failed: 0,
+      progress: 0,
+      done: false
+    });
+
     try {
-      await fileApi.downloadBatchFiles(selectedFiles);
-      setSelectedFiles([]);
-      setIsSelectionMode(false);
+      const result = await fileApi.downloadBatchFiles(
+        selectedFiles,
+        (completed, total, progress) => {
+          setDownloadState(prev => prev ? {
+            ...prev,
+            completed,
+            progress
+          } : null);
+        }
+      );
+
+      setDownloadState(prev => prev ? {
+        ...prev,
+        completed: result.completed,
+        failed: result.failed,
+        done: true
+      } : null);
+
+      // Auto-close and reset after 3 seconds
+      setTimeout(() => {
+        setDownloadState(null);
+        setSelectedFiles([]);
+        setIsSelectionMode(false);
+      }, 3000);
     } catch (err) {
       console.error('[SharedFolderView] Download failed:', err);
-      alert('다운로드에 실패했습니다.');
+      setDownloadState(prev => prev ? {
+        ...prev,
+        error: err.message,
+        done: true
+      } : null);
+
+      setTimeout(() => {
+        setDownloadState(null);
+      }, 5000);
     }
   };
 
@@ -349,6 +394,110 @@ const SharedFolderView = () => {
         uploadState={uploadState}
         onClose={() => setUploadState(null)}
       />
+
+      {/* Download Progress Modal */}
+      {downloadState && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'var(--surface, white)',
+            borderRadius: '16px',
+            padding: '24px',
+            width: 'min(90vw, 400px)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '20px'
+            }}>
+              {downloadState.done ? (
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: downloadState.failed > 0 ? '#FEF3C7' : '#D1FAE5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px'
+                }}>
+                  {downloadState.failed > 0 ? '⚠️' : '✅'}
+                </div>
+              ) : (
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '3px solid var(--primary)',
+                  borderTopColor: 'transparent',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              )}
+              <div>
+                <div style={{ fontWeight: '600', fontSize: '16px' }}>
+                  {downloadState.done
+                    ? (downloadState.failed > 0 ? '다운로드 완료 (일부 실패)' : '다운로드 완료!')
+                    : '다운로드 중...'}
+                </div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  {downloadState.completed} / {downloadState.total} 파일
+                  {downloadState.failed > 0 && ` (${downloadState.failed}개 실패)`}
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            {!downloadState.done && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  height: '8px',
+                  background: 'var(--background, #e0e0e0)',
+                  borderRadius: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${downloadState.progress}%`,
+                    height: '100%',
+                    background: 'var(--primary, #1a73e8)',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <div style={{
+                  textAlign: 'right',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)',
+                  marginTop: '4px'
+                }}>
+                  {downloadState.progress}%
+                </div>
+              </div>
+            )}
+
+            {/* Done Message */}
+            {downloadState.done && (
+              <div style={{
+                textAlign: 'center',
+                fontSize: '13px',
+                color: 'var(--text-tertiary)'
+              }}>
+                잠시 후 자동으로 닫힙니다...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Selection Action Bar */}
       {isSelectionMode && (

@@ -71,17 +71,19 @@ const Gallery = () => {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const dateParam = params.get('date');
-        if (dateParam) {
+        if (dateParam && !loading && files.length > 0) {
             setTargetDate(dateParam);
-            // Wait for render then scroll
-            setTimeout(() => {
-                const element = document.getElementById(`date-${dateParam}`);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 500);
+            // Wait for DOM to update after files are loaded
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    const element = document.getElementById(`date-${dateParam}`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            });
         }
-    }, [location.search]);
+    }, [location.search, loading, files.length]);
 
     // Listen for file:processed events from WebSocket
     useEffect(() => {

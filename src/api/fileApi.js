@@ -425,13 +425,36 @@ const fileApi = {
    * 배치 다운로드 (여러 파일을 순차적으로 다운로드)
    *
    * @param {Array<number>} fileIds - 파일 ID 배열
+   * @param {Function} onProgress - 진행률 콜백 (completed, total, percentage)
+   * @returns {Promise<Object>} { completed, total, failed }
    */
-  async downloadBatchFiles(fileIds) {
+  async downloadBatchFiles(fileIds, onProgress) {
+    const total = fileIds.length;
+    let completed = 0;
+    let failed = 0;
+
     for (const fileId of fileIds) {
-      await this.downloadFile(fileId);
+      if (onProgress) {
+        onProgress(completed, total, Math.round((completed / total) * 100));
+      }
+
+      try {
+        await this.downloadFile(fileId);
+        completed++;
+      } catch (error) {
+        console.error(`Failed to download file ${fileId}:`, error);
+        failed++;
+      }
+
+      if (onProgress) {
+        onProgress(completed, total, Math.round((completed / total) * 100));
+      }
+
       // 브라우저의 다운로드 제한을 피하기 위해 약간의 딜레이
       await new Promise(resolve => setTimeout(resolve, 500));
     }
+
+    return { completed, total, failed };
   },
 
   /**

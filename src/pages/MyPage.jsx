@@ -360,13 +360,19 @@ const MyPage = () => {
 
                     {daysInMonth.map(date => {
                         const dateKey = format(date, 'yyyy-MM-dd');
+                        const hasActivity = activityData[dateKey];
+                        const hasFiles = hasActivity && hasActivity.uploads > 0;
                         return (
                             <DayCell
                                 key={dateKey}
                                 date={date}
                                 activity={activityData[dateKey]}
                                 isToday={isSameDay(date, new Date())}
-                                onClick={() => navigate(`/gallery?date=${dateKey}`)}
+                                onClick={() => {
+                                    if (hasFiles) {
+                                        navigate(`/gallery?date=${dateKey}`);
+                                    }
+                                }}
                             />
                         );
                     })}
