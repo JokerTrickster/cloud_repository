@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import fileApi, { fileValidation } from '../api/fileApi';
 
-const FileUpload = ({ onUploadStart, onClose }) => {
+const FileUpload = ({ onUploadStart, onClose, folderId = null }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileTags, setFileTags] = useState({}); // { fileIndex: [tags] }
   const [errors, setErrors] = useState([]);
@@ -149,10 +149,12 @@ const FileUpload = ({ onUploadStart, onClose }) => {
     // 업로드 함수 생성 (백그라운드 실행용)
     const uploadFn = (onProgress) => {
       console.log('📤 uploadFn called with onProgress callback');
+      console.log('📤 folderId:', folderId);
       return fileApi.uploadBatchFiles(
         selectedFiles,
         onProgress,
-        fileTags
+        fileTags,
+        folderId  // Pass folder ID for shared folder uploads
       );
     };
 

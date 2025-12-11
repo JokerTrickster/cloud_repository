@@ -340,6 +340,7 @@ const SharedFolderView = () => {
         <FileUpload
           onUploadStart={handleUploadStart}
           onClose={() => setShowUpload(false)}
+          folderId={folderId}
         />
       )}
 

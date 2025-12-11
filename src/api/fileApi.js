@@ -133,9 +133,10 @@ const fileApi = {
    * @param {Array<File>} files - 업로드할 파일 배열 (최대 30개)
    * @param {Function} onProgress - 진행률 콜백 (fileIndex, progress)
    * @param {Object} fileTags - 파일별 태그 정보 { fileIndex: { tags: [string] } }
+   * @param {number|null} folderId - 폴더 ID (공유 폴더 업로드용)
    * @returns {Promise<Array>} 업로드 결과 배열
    */
-  async uploadBatchFiles(files, onProgress, fileTags = {}) {
+  async uploadBatchFiles(files, onProgress, fileTags = {}, folderId = null) {
     console.log('🚀 uploadBatchFiles called with', files.length, 'files');
     console.log('🚀 Files:', files.map(f => `${f.name} (${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB)`));
 
@@ -242,6 +243,11 @@ const fileApi = {
           file_type: file.type.startsWith('image/') ? 'image' : 'video',
           file_size: file.size,
         };
+
+        // 폴더 ID 추가 (공유 폴더 업로드용)
+        if (folderId) {
+          info.folder_id = parseInt(folderId);
+        }
 
         // 태그 추가
         const tags = fileTags[index]?.tags || [];
