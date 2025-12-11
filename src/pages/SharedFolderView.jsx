@@ -82,6 +82,19 @@ const SharedFolderView = () => {
       background: 'var(--background)',
       padding: '20px'
     }}>
+      <style>{`
+        .shared-folder-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
+        }
+        @media (max-width: 768px) {
+          .shared-folder-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+          }
+        }
+      `}</style>
       {/* Header */}
       <div style={{
         maxWidth: '1400px',
@@ -192,11 +205,7 @@ const SharedFolderView = () => {
             </div>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: '20px'
-          }}>
+          <div className="shared-folder-grid">
             {files.map((file) => (
               <div
                 key={file.id}

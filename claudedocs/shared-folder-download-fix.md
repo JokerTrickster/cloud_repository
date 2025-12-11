@@ -319,6 +319,7 @@ downloadFile: async (fileId, fileName) => {
 - [x] SharedFolderView 페이지 구현
 - [x] 라우팅 설정
 - [x] SharedWithMe에서 네비게이션 연동
+- [x] 5열 그리드 레이아웃 적용 (SharedFolderView, SharedWithMe)
 - [ ] 백엔드 수정 후 통합 테스트
 - [ ] 다운로드 실패 시 에러 메시지 확인
 

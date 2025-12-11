@@ -180,7 +180,20 @@ const SharedWithMe = () => {
   const currentFiles = viewMode === 'received' ? receivedFiles : sharedFiles;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
+      <style>{`
+        .shared-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
+        }
+        @media (max-width: 768px) {
+          .shared-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+          }
+        }
+      `}</style>
       {/* 헤더 */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
@@ -327,11 +340,7 @@ const SharedWithMe = () => {
                   </div>
                 </div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                  gap: '16px'
-                }}>
+                <div className="shared-grid">
                   {currentFolders.map((folder) => (
                     <div
                       key={folder.id}
@@ -580,11 +589,7 @@ const SharedWithMe = () => {
                   </div>
                 </div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                  gap: '16px'
-                }}>
+                <div className="shared-grid">
                   {currentFiles.map((file) => (
                     <div
                       key={file.id}

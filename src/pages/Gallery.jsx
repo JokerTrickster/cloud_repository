@@ -19,6 +19,7 @@ import FolderSidebar from '../components/FolderSidebar';
 import CreateFolderModal from '../components/CreateFolderModal';
 import MoveFilesModal from '../components/MoveFilesModal';
 import ShareModal from '../components/ShareModal';
+import UploadProgressModal from '../components/UploadProgressModal';
 import { useGalleryFiles } from '../hooks/useGalleryFiles';
 import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 
@@ -946,116 +947,11 @@ const Gallery = () => {
                     onDownload={handleDownloadFile}
                 />
 
-                {/* Upload Progress Toast */}
-                {/* Fixed Upload Progress Bar at Bottom */}
-                {uploadState && (
-                    <div style={{
-                        position: 'fixed',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        background: 'var(--surface)',
-                        borderTop: '1px solid var(--border)',
-                        padding: '16px 24px',
-                        boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
-                        zIndex: 1000
-                    }}>
-                        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <div>
-                                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                        {uploadState.done ? '업로드 완료' : '파일 업로드 중...'}
-                                    </span>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
-                                        {uploadState.completed}/{uploadState.total} 파일
-                                        {uploadState.failed > 0 && ` (실패: ${uploadState.failed})`}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => setUploadState(null)}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '4px',
-                                        color: 'var(--text-tertiary)'
-                                    }}
-                                >
-                                    ✕
-                                </button>
-                            </div>
-
-                            {/* Warning Message */}
-                            {!uploadState.done && (
-                                <div style={{
-                                    marginBottom: '12px',
-                                    padding: '8px 12px',
-                                    background: '#FFF3E0',
-                                    border: '1px solid #FFE0B2',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    color: '#E65100',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                }}>
-                                    <span>⚠️</span>
-                                    <span>업로드 중에는 화면을 끄거나 페이지를 벗어나지 마세요.</span>
-                                </div>
-                            )}
-                            {/* Individual File Progress */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {uploadState.files.map((file, index) => {
-                                    const progress = uploadState.progress[index] || 0;
-                                    const isComplete = progress === 100;
-                                    return (
-                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{
-                                                flex: 1,
-                                                fontSize: '13px',
-                                                color: 'var(--text-secondary)',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                                minWidth: 0
-                                            }}>
-                                                {file.name}
-                                            </div>
-                                            <div style={{
-                                                flex: 2,
-                                                position: 'relative',
-                                                height: '6px',
-                                                background: 'var(--background)',
-                                                borderRadius: '3px',
-                                                overflow: 'hidden'
-                                            }}>
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    left: 0,
-                                                    height: '100%',
-                                                    width: `${progress}%`,
-                                                    background: isComplete ? '#4CAF50' : 'var(--primary)',
-                                                    transition: 'width 0.3s ease',
-                                                    borderRadius: '3px'
-                                                }} />
-                                            </div>
-                                            <div style={{
-                                                width: '50px',
-                                                textAlign: 'right',
-                                                fontSize: '13px',
-                                                fontWeight: '500',
-                                                color: isComplete ? '#4CAF50' : 'var(--text-primary)'
-                                            }}>
-                                                {progress}%
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Upload Progress Modal */}
+                <UploadProgressModal
+                    uploadState={uploadState}
+                    onClose={() => setUploadState(null)}
+                />
                 {/* Tag Edit Modal */}
                 {editingFile && (
                     <TagEditModal
