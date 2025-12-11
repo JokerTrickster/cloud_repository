@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, FolderOpen, Image, Video, File as FileIcon } from 'lucide-react';
 import folderApi from '../api/folderApi';
 import fileApi from '../api/fileApi';
+import './SharedFolderView.css';
 
 const SharedFolderView = () => {
   const { folderId } = useParams();
@@ -12,6 +13,7 @@ const SharedFolderView = () => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imageErrors, setImageErrors] = useState(new Set());
 
   // Load folder info and files
   useEffect(() => {
@@ -61,6 +63,11 @@ const SharedFolderView = () => {
     }
   };
 
+  // Handle image load error
+  const handleImageError = (fileId) => {
+    setImageErrors(prev => new Set([...prev, fileId]));
+  };
+
   // Format file size
   const formatFileSize = (bytes) => {
     if (!bytes) return '0 B';
@@ -69,261 +76,142 @@ const SharedFolderView = () => {
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  // Get file icon
-  const getFileIcon = (fileType) => {
-    if (fileType === 'image') return <Image size={20} />;
-    if (fileType === 'video') return <Video size={20} />;
-    return <FileIcon size={20} />;
+  // Get file icon component
+  const getFileIcon = (fileType, size = 48) => {
+    const iconProps = { size, strokeWidth: 1.5 };
+    if (fileType === 'image') return <Image {...iconProps} />;
+    if (fileType === 'video') return <Video {...iconProps} />;
+    return <FileIcon {...iconProps} />;
+  };
+
+  // Get file type background color
+  const getFileTypeColor = (fileType) => {
+    if (fileType === 'image') return '#E8F0FE';
+    if (fileType === 'video') return '#FEF7E0';
+    return '#F1F3F4';
+  };
+
+  // Get file type icon color
+  const getFileTypeIconColor = (fileType) => {
+    if (fileType === 'image') return '#1967D2';
+    if (fileType === 'video') return '#E37400';
+    return '#5F6368';
+  };
+
+  // Render file card
+  const renderFileCard = (file) => {
+    const hasImageError = imageErrors.has(file.id);
+    const showFallback = !file.thumbnail_url || hasImageError;
+
+    return (
+      <div key={file.id} className="file-card">
+        {/* Thumbnail Area */}
+        <div className="file-thumbnail-container">
+          {showFallback ? (
+            <div
+              className="file-thumbnail-fallback"
+              style={{
+                backgroundColor: getFileTypeColor(file.file_type),
+                color: getFileTypeIconColor(file.file_type)
+              }}
+            >
+              {getFileIcon(file.file_type, 56)}
+            </div>
+          ) : (
+            <img
+              src={file.thumbnail_url}
+              alt={file.file_name}
+              className="file-thumbnail-image"
+              onError={() => handleImageError(file.id)}
+              loading="lazy"
+            />
+          )}
+        </div>
+
+        {/* File Info Area */}
+        <div className="file-info">
+          <div className="file-details">
+            <div className="file-icon-small" style={{ color: getFileTypeIconColor(file.file_type) }}>
+              {getFileIcon(file.file_type, 18)}
+            </div>
+            <div className="file-text">
+              <div className="file-name" title={file.file_name}>
+                {file.file_name}
+              </div>
+              <div className="file-size">
+                {formatFileSize(file.file_size)}
+              </div>
+            </div>
+          </div>
+
+          {/* Download Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownload(file);
+            }}
+            className="download-button"
+            aria-label={`${file.file_name} 다운로드`}
+          >
+            <Download size={16} />
+            <span>다운로드</span>
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--background)',
-      padding: '20px'
-    }}>
-      <style>{`
-        .shared-folder-grid {
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 16px;
-        }
-        @media (max-width: 768px) {
-          .shared-folder-grid {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-          }
-        }
-      `}</style>
+    <div className="shared-folder-view">
       {/* Header */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        marginBottom: '24px'
-      }}>
-        {/* Breadcrumb */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '16px'
-        }}>
-          <button
-            onClick={() => navigate('/shared-with-me')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              cursor: 'pointer',
-              fontSize: '14px',
-              color: 'var(--text-secondary)',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--background)';
-              e.currentTarget.style.borderColor = 'var(--primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--surface)';
-              e.currentTarget.style.borderColor = 'var(--border)';
-            }}
-          >
-            <ArrowLeft size={16} />
-            공유 관리로 돌아가기
-          </button>
-        </div>
+      <div className="shared-folder-header">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/shared-with-me')}
+          className="back-button"
+        >
+          <ArrowLeft size={18} />
+          <span className="back-button-text">공유 관리로 돌아가기</span>
+        </button>
 
-        {/* Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <FolderOpen size={32} color="var(--primary)" />
-          <div>
-            <h1 style={{
-              fontSize: '24px',
-              fontWeight: '600',
-              margin: 0,
-              color: 'var(--text-primary)'
-            }}>
+        {/* Title Section */}
+        <div className="title-section">
+          <div className="folder-icon">
+            <FolderOpen size={32} />
+          </div>
+          <div className="title-text">
+            <h1 className="folder-title">
               {folder?.name || '로딩 중...'}
             </h1>
-            <p style={{
-              fontSize: '14px',
-              color: 'var(--text-secondary)',
-              margin: '4px 0 0 0'
-            }}>
+            <p className="folder-subtitle">
               {files.length}개 파일
             </p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      {/* Content Area */}
+      <div className="shared-folder-content">
         {loading ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '80px 20px',
-            color: 'var(--text-tertiary)',
-            fontSize: '14px'
-          }}>
-            로딩 중...
+          <div className="empty-state">
+            <div className="loading-spinner"></div>
+            <p>로딩 중...</p>
           </div>
         ) : error ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '80px 20px'
-          }}>
-            <div style={{
-              padding: '20px',
-              background: '#FEE2E2',
-              border: '1px solid #FCA5A5',
-              borderRadius: 'var(--radius-md)',
-              color: '#DC2626',
-              fontSize: '14px',
-              maxWidth: '400px',
-              margin: '0 auto'
-            }}>
+          <div className="empty-state">
+            <div className="error-message">
               {error}
             </div>
           </div>
         ) : files.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '80px 20px',
-            color: 'var(--text-tertiary)',
-            fontSize: '14px'
-          }}>
-            <FileIcon size={64} color="var(--text-tertiary)" style={{ marginBottom: '16px', opacity: 0.3 }} />
-            <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-              폴더가 비어있습니다
-            </div>
-            <div>
-              이 폴더에는 아직 파일이 없습니다
-            </div>
+          <div className="empty-state">
+            <FileIcon size={64} className="empty-icon" />
+            <div className="empty-title">폴더가 비어있습니다</div>
+            <div className="empty-subtitle">이 폴더에는 아직 파일이 없습니다</div>
           </div>
         ) : (
-          <div className="shared-folder-grid">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  overflow: 'hidden',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  e.currentTarget.style.borderColor = 'var(--primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                }}
-              >
-                {/* Thumbnail */}
-                <div style={{
-                  width: '100%',
-                  height: '180px',
-                  background: file.thumbnail_url ? 'var(--background)' : 'var(--surface)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
-                }}>
-                  {file.thumbnail_url ? (
-                    <img
-                      src={file.thumbnail_url}
-                      alt={file.file_name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  ) : (
-                    <div style={{ opacity: 0.3 }}>
-                      {file.file_type === 'image' ? (
-                        <Image size={64} color="var(--text-tertiary)" />
-                      ) : file.file_type === 'video' ? (
-                        <Video size={64} color="var(--text-tertiary)" />
-                      ) : (
-                        <FileIcon size={64} color="var(--text-tertiary)" />
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* File Info */}
-                <div style={{ padding: '16px' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '8px',
-                    marginBottom: '12px'
-                  }}>
-                    <div style={{ color: 'var(--primary)', marginTop: '2px' }}>
-                      {getFileIcon(file.file_type)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          marginBottom: '4px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: 'var(--text-primary)'
-                        }}
-                        title={file.file_name}
-                      >
-                        {file.file_name}
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: 'var(--text-tertiary)'
-                      }}>
-                        {formatFileSize(file.file_size)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Download Button */}
-                  <button
-                    onClick={() => handleDownload(file)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'var(--primary)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 'var(--radius-sm)',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                  >
-                    <Download size={16} />
-                    다운로드
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="files-grid">
+            {files.map(renderFileCard)}
           </div>
         )}
       </div>
