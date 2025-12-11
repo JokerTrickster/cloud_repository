@@ -109,7 +109,7 @@ const SharedFolderView = () => {
           marginBottom: '16px'
         }}>
           <button
-            onClick={() => navigate('/shared')}
+            onClick={() => navigate('/shared-with-me')}
             style={{
               display: 'flex',
               alignItems: 'center',
