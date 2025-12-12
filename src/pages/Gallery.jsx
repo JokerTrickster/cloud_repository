@@ -219,16 +219,16 @@ const Gallery = () => {
         maxDuration: 600000, // 최대 10분
     });
 
-    const handleScrollToDate = (e) => {
+    const handleScrollToDate = useCallback((e) => {
         const date = e.target.value;
         setTargetDate(date);
         const element = document.getElementById(`date-${date}`);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-    };
+    }, []);
 
-    const handleDateRangeSelect = (date) => {
+    const handleDateRangeSelect = useCallback((date) => {
         if (!dateRange.start || (dateRange.start && dateRange.end)) {
             setDateRange({ start: date, end: null });
         } else {
@@ -240,7 +240,7 @@ const Gallery = () => {
             }
             setShowCalendar(false); // Close calendar after selecting range
         }
-    };
+    }, [dateRange]);
 
     // Memoized Filter and Sort Logic (client-side filtering for search term only)
     const filteredFiles = useMemo(() => {
@@ -266,7 +266,7 @@ const Gallery = () => {
         }, {});
     }, [filteredFiles]);
 
-    const toggleSelection = (id) => {
+    const toggleSelection = useCallback((id) => {
         if (selectedFiles.includes(id)) {
             setSelectedFiles(selectedFiles.filter(fid => fid !== id));
         } else {
@@ -276,9 +276,9 @@ const Gallery = () => {
             }
             setSelectedFiles([...selectedFiles, id]);
         }
-    };
+    }, [selectedFiles]);
 
-    const handleDownload = async () => {
+    const handleDownload = useCallback(async () => {
         try {
             await fileApi.downloadBatchFiles(selectedFiles);
             setSelectedFiles([]);
@@ -287,7 +287,7 @@ const Gallery = () => {
             console.error('Download failed:', err);
             alert('다운로드에 실패했습니다.');
         }
-    };
+    }, [selectedFiles]);
 
     // Set up video player and image viewer callbacks
     useEffect(() => {
@@ -304,7 +304,7 @@ const Gallery = () => {
     }, []);
 
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         if (window.confirm(`${selectedFiles.length}개의 파일을 삭제하시겠습니까?`)) {
             try {
                 await fileApi.deleteBatchFiles(selectedFiles);
@@ -317,9 +317,9 @@ const Gallery = () => {
                 alert('삭제에 실패했습니다.');
             }
         }
-    };
+    }, [selectedFiles, loadFiles]);
 
-    const handleUploadStart = (files, fileTags, uploadFn) => {
+    const handleUploadStart = useCallback((files, fileTags, uploadFn) => {
         console.log('[Gallery] Starting upload for', files.length, 'files');
         console.log('[Gallery] File sizes:', files.map(f => `${f.name}: ${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB`));
 
@@ -412,16 +412,16 @@ const Gallery = () => {
                 failed: prev.total
             } : null);
         }
-    };
+    }, [loadFiles]);
 
     // Share handler - 폴더/파일 공유 모달 열기
-    const handleShare = (type, id, name) => {
+    const handleShare = useCallback((type, id, name) => {
         setShareTarget({ type, id, name });
         setShowShareModal(true);
-    };
+    }, []);
 
     // Web Share API - 모바일에서 사진/동영상 공유
-    const handleWebShare = async (file) => {
+    const handleWebShare = useCallback(async (file) => {
         try {
             // Check if Web Share API is supported
             if (!navigator.share) {
@@ -458,20 +458,20 @@ const Gallery = () => {
                 alert('공유에 실패했습니다.');
             }
         }
-    };
+    }, []);
 
     // Download file (fallback for desktop)
-    const handleDownloadFile = async (file) => {
+    const handleDownloadFile = useCallback(async (file) => {
         try {
             await fileApi.downloadFile(file.id, file.name);
         } catch (error) {
             console.error('Download failed:', error);
             alert('다운로드에 실패했습니다.');
         }
-    };
+    }, []);
 
     // Toggle favorite with optimistic update
-    const handleToggleFavorite = async (fileId, currentFavorite) => {
+    const handleToggleFavorite = useCallback(async (fileId, currentFavorite) => {
         // Optimistic update
         setFiles(prevFiles =>
             prevFiles.map(f =>
@@ -504,21 +504,21 @@ const Gallery = () => {
             const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
             alert(`즐겨찾기 변경에 실패했습니다.\n에러: ${errorMsg}\n\n백엔드 서버 로그를 확인해주세요.`);
         }
-    };
+    }, []);
 
     // Handle tag update from TagEditor
-    const handleTagUpdate = (fileId, newTags) => {
+    const handleTagUpdate = useCallback((fileId, newTags) => {
         console.log('[Tags] Updating tags:', { fileId, newTags });
         setFiles(prevFiles =>
             prevFiles.map(f =>
                 f.id === fileId ? { ...f, tags: newTags } : f
             )
         );
-    };
+    }, []);
 
-    const openTagEditor = (file) => {
+    const openTagEditor = useCallback((file) => {
         setEditingFile(file);
-    };
+    }, []);
 
     // Load folders on mount
     useEffect(() => {
@@ -587,25 +587,25 @@ const Gallery = () => {
     }, [folderFilteredFiles]);
 
     // Folder handlers
-    const handleFolderSelect = (folder) => {
+    const handleFolderSelect = useCallback((folder) => {
         console.log('[Gallery] Folder selected:', folder?.id || 'root');
         setCurrentFolder(folder);
         setSelectedFiles([]); // Clear selection when changing folders
         // Note: useEffect will automatically reload files when currentFolder changes
-    };
+    }, []);
 
-    const handleCreateFolder = (parentFolderId) => {
+    const handleCreateFolder = useCallback((parentFolderId) => {
         setCreateFolderParentId(parentFolderId);
         setEditingFolder(null);
         setShowCreateFolder(true);
-    };
+    }, []);
 
-    const handleRenameFolder = (folder) => {
+    const handleRenameFolder = useCallback((folder) => {
         setEditingFolder(folder);
         setShowCreateFolder(true);
-    };
+    }, []);
 
-    const handleFolderSubmit = async (folderName, parentFolderId) => {
+    const handleFolderSubmit = useCallback(async (folderName, parentFolderId) => {
         try {
             if (editingFolder) {
                 // Rename existing folder
@@ -622,9 +622,9 @@ const Gallery = () => {
             console.error('[Gallery] Folder operation failed:', err);
             throw err;
         }
-    };
+    }, [editingFolder, loadFolders]);
 
-    const handleDeleteFolder = async (folderId) => {
+    const handleDeleteFolder = useCallback(async (folderId) => {
         try {
             await folderApi.deleteFolder(folderId);
             loadFolders(); // Reload folders
@@ -664,9 +664,9 @@ const Gallery = () => {
             // Reload folders in case state changed
             loadFolders();
         }
-    };
+    }, [currentFolder, loadFolders, loadFiles]);
 
-    const handleMoveFilesToFolder = () => {
+    const handleMoveFilesToFolder = useCallback(() => {
         console.log('[Gallery] handleMoveFilesToFolder called:', {
             selectedFilesCount: selectedFiles.length,
             selectedFileIds: selectedFiles
@@ -680,9 +680,9 @@ const Gallery = () => {
 
         console.log('[Gallery] Opening move files modal');
         setShowMoveFiles(true);
-    };
+    }, [selectedFiles]);
 
-    const handleMoveFiles = async (targetFolderId) => {
+    const handleMoveFiles = useCallback(async (targetFolderId) => {
         try {
             console.log('[MoveFiles] Starting move operation:', {
                 selectedFiles,
@@ -747,7 +747,7 @@ const Gallery = () => {
 
             throw err;
         }
-    };
+    }, [selectedFiles, currentFolder, dateRange, filterType, sortOption, favoriteOnly, loadFolders, loadFiles]);
 
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
