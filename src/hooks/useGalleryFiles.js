@@ -8,6 +8,8 @@ export const useGalleryFiles = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [tags, setTags] = useState([]);
+    const [hasMore, setHasMore] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Performance Measurement Refs
     const loadStartTime = useRef(0);
@@ -15,9 +17,24 @@ export const useGalleryFiles = () => {
     const totalImagesToLoad = useRef(0);
     const apiEndTime = useRef(0);
 
-    const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly, folderId } = {}) => {
+    // Keep track of last load params to detect filter changes
+    const lastParamsRef = useRef({});
+
+    const loadFiles = async ({ dateRange = {}, filterType, sortOption, favoriteOnly, folderId, append = false } = {}) => {
         setLoading(true);
         setError('');
+
+        // Detect if filters changed - if so, reset pagination
+        const currentParams = { dateRange, filterType, sortOption, favoriteOnly, folderId };
+        const paramsChanged = JSON.stringify(currentParams) !== JSON.stringify(lastParamsRef.current);
+
+        if (paramsChanged && !append) {
+            setCurrentPage(1);
+            setHasMore(true);
+            lastParamsRef.current = currentParams;
+        }
+
+        const pageToLoad = append ? currentPage + 1 : 1;
 
         // Reset performance metrics
         loadStartTime.current = performance.now();
@@ -42,8 +59,8 @@ export const useGalleryFiles = () => {
             if (favoriteOnly) {
                 // Fetch favorites list (separate API)
                 const params = {
-                    page: 1,
-                    size: 100,
+                    page: pageToLoad,
+                    size: 50, // Reduced from 100 for progressive loading
                     sort: sortOption === 'latest' ? 'uploadDate' : sortOption,
                     order: sortOption === 'latest' || sortOption === 'oldest' ? (sortOption === 'latest' ? 'desc' : 'asc') : 'desc',
                 };
@@ -57,6 +74,9 @@ export const useGalleryFiles = () => {
                 console.log('[Favorites] Favorites data:', favoritesData);
 
                 transformedFiles = favoritesData.map(file => transformFileData(file, true, favoriteFileIds));
+
+                // Check if there are more pages
+                setHasMore(transformedFiles.length === 50);
             } else if (folderId) {
                 // Fetch files in specific folder
                 console.log(`[Gallery] Fetching files for folder: ${folderId}`);
@@ -108,8 +128,8 @@ export const useGalleryFiles = () => {
                     sort: sortOption,
                     start_date: dateRange?.start ? format(dateRange.start, 'yyyy-MM-dd') : undefined,
                     end_date: dateRange?.end ? format(dateRange.end, 'yyyy-MM-dd') : undefined,
-                    page: 1,
-                    page_size: 100,
+                    page: pageToLoad,
+                    page_size: 50, // Reduced from 100 for progressive loading
                 };
 
                 const result = await fileApi.getFiles(params);
@@ -124,10 +144,20 @@ export const useGalleryFiles = () => {
 
                 transformedFiles = (rawFiles || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
 
-                console.log(`[Gallery] Loaded ${transformedFiles.length} files`);
+                console.log(`[Gallery] Loaded ${transformedFiles.length} files (page ${pageToLoad})`);
+
+                // Check if there are more pages
+                setHasMore(transformedFiles.length === 50);
             }
 
-            setFiles(transformedFiles);
+            // Append or replace files based on append flag
+            if (append) {
+                setFiles(prev => [...prev, ...transformedFiles]);
+                setCurrentPage(pageToLoad);
+            } else {
+                setFiles(transformedFiles);
+                setCurrentPage(1);
+            }
 
             apiEndTime.current = performance.now();
             totalImagesToLoad.current = transformedFiles.length;
@@ -183,6 +213,19 @@ export const useGalleryFiles = () => {
         }
     };
 
+    const loadMore = async ({ dateRange, filterType, sortOption, favoriteOnly, folderId } = {}) => {
+        if (!hasMore || loading) return;
+
+        await loadFiles({
+            dateRange,
+            filterType,
+            sortOption,
+            favoriteOnly,
+            folderId,
+            append: true
+        });
+    };
+
     return {
         files,
         setFiles,
@@ -191,6 +234,8 @@ export const useGalleryFiles = () => {
         tags,
         setTags,
         loadFiles,
+        loadMore,
+        hasMore,
         handleImageLoad
     };
 };

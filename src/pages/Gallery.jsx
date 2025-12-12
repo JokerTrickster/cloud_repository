@@ -25,7 +25,7 @@ import useFileProcessingMonitor from '../hooks/useFileProcessingMonitor';
 
 const Gallery = () => {
     const location = useLocation();
-    const { files, setFiles, loading, error, tags, setTags, loadFiles, handleImageLoad } = useGalleryFiles();
+    const { files, setFiles, loading, error, tags, setTags, loadFiles, loadMore, hasMore, handleImageLoad } = useGalleryFiles();
     const [searchTerm, setSearchTerm] = useState('');
     const [playingVideo, setPlayingVideo] = useState(null);
     const [viewingImage, setViewingImage] = useState(null);
@@ -99,6 +99,37 @@ const Gallery = () => {
             window.removeEventListener('file:processed', handleFileProcessed);
         };
     }, []);
+
+    // Infinite scroll detection
+    const scrollContainerRef = useRef(null);
+
+    useEffect(() => {
+        const scrollContainer = scrollContainerRef.current;
+        if (!scrollContainer || !hasMore || loading) return;
+
+        const handleScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+            // Load more when user is within 500px of bottom
+            if (distanceFromBottom < 500 && hasMore && !loading) {
+                console.log('[InfiniteScroll] Loading more files...');
+                loadMore({
+                    dateRange,
+                    filterType,
+                    sortOption,
+                    favoriteOnly,
+                    folderId: currentFolder?.id
+                });
+            }
+        };
+
+        scrollContainer.addEventListener('scroll', handleScroll);
+
+        return () => {
+            scrollContainer.removeEventListener('scroll', handleScroll);
+        };
+    }, [hasMore, loading, dateRange, filterType, sortOption, favoriteOnly, currentFolder, loadMore]);
 
     // Screen Wake Lock
     const wakeLockRef = useRef(null);
@@ -765,16 +796,19 @@ const Gallery = () => {
             />
 
             {/* Main Gallery Content */}
-            <div style={{
-                flex: 1,
-                padding: '16px',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                paddingBottom: '80px',
-                overflow: 'auto',
-                width: '100%' // Ensure full width on mobile
-            }}>
+            <div
+                ref={scrollContainerRef}
+                style={{
+                    flex: 1,
+                    padding: '16px',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    paddingBottom: '80px',
+                    overflow: 'auto',
+                    width: '100%' // Ensure full width on mobile
+                }}
+            >
                 <style>{`
                 .gallery-grid {
                     display: grid;
@@ -915,6 +949,7 @@ const Gallery = () => {
                     onShowUpload={() => setShowUpload(true)}
                     onToggleFavorite={handleToggleFavorite}
                     uploadState={uploadState}
+                    hasMore={hasMore}
                 />
 
                 {/* File Upload Modal */}

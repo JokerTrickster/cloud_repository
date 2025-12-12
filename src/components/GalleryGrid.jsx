@@ -17,10 +17,11 @@ const GalleryGrid = ({
     onOpenOptions,
     onShowUpload,
     onToggleFavorite,
-    uploadState
+    uploadState,
+    hasMore
 }) => {
-    // Loading State
-    if (loading) {
+    // Loading State (only show for initial load, not for "load more")
+    if (loading && (!files || files.length === 0)) {
         return (
             <div style={{
                 flex: 1,
@@ -244,6 +245,38 @@ const GalleryGrid = ({
                     </div>
                 </div>
             ))}
+
+            {/* Loading More Indicator */}
+            {!loading && hasMore && (
+                <div style={{
+                    padding: '24px',
+                    textAlign: 'center',
+                    color: 'var(--text-secondary)',
+                    fontSize: '14px'
+                }}>
+                    <Loader
+                        size={20}
+                        style={{
+                            animation: 'spin 1s linear infinite',
+                            display: 'inline-block',
+                            marginRight: '8px'
+                        }}
+                    />
+                    더 많은 파일 불러오는 중...
+                </div>
+            )}
+
+            {/* End of List Indicator */}
+            {!loading && !hasMore && files && files.length > 0 && (
+                <div style={{
+                    padding: '24px',
+                    textAlign: 'center',
+                    color: 'var(--text-tertiary)',
+                    fontSize: '14px'
+                }}>
+                    모든 파일을 불러왔습니다
+                </div>
+            )}
         </div>
     );
 };
