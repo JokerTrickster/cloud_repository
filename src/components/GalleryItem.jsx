@@ -185,17 +185,6 @@ GalleryItemMedia.displayName = 'GalleryItemMedia';
 const GalleryItem = memo(({ file, isSelectionMode, isSelected, onToggle, searchTerm, onLoad, index, onOpenOptions, onToggleFavorite }) => {
     const [isHovered, setIsHovered] = useState(false);
 
-    // 디버깅: 동영상 파일 렌더링 정보
-    if (file.type === 'video') {
-        console.log('[GalleryItem] Rendering video:', {
-            name: file.name,
-            url: file.url,
-            originalUrl: file.originalUrl,
-            processing_status: file.processing_status,
-            isPlaceholder: file.url?.includes('placeholder')
-        });
-    }
-
     // Handle hover for video preview and image preload
     const handleMouseEnter = () => {
         if (!isSelectionMode) {

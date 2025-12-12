@@ -42,8 +42,6 @@ export const useGalleryFiles = () => {
         totalImagesToLoad.current = 0;
         apiEndTime.current = 0;
 
-        console.time('Gallery Load');
-
         try {
             let transformedFiles = [];
             let favoriteFileIds = new Set();
@@ -65,13 +63,10 @@ export const useGalleryFiles = () => {
                     order: sortOption === 'latest' || sortOption === 'oldest' ? (sortOption === 'latest' ? 'desc' : 'asc') : 'desc',
                 };
 
-                console.log('[Favorites] Fetching favorites with params:', params);
                 const result = await fileApi.getFavorites(params);
-                console.log('[Favorites] API response:', result);
 
                 // Transform favorites API response
                 const favoritesData = result.data || result;
-                console.log('[Favorites] Favorites data:', favoritesData);
 
                 transformedFiles = favoritesData.map(file => transformFileData(file, true, favoriteFileIds));
 
@@ -79,7 +74,6 @@ export const useGalleryFiles = () => {
                 setHasMore(transformedFiles.length === 50);
             } else if (folderId) {
                 // Fetch files in specific folder
-                console.log(`[Gallery] Fetching files for folder: ${folderId}`);
                 const result = await folderApi.getFolderFiles(folderId);
 
                 // Handle response structure
@@ -119,7 +113,6 @@ export const useGalleryFiles = () => {
                 });
 
                 transformedFiles = files;
-                console.log(`[Gallery] Loaded ${transformedFiles.length} files from folder ${folderId}`);
 
             } else {
                 // Fetch general files list (Root or All)
@@ -144,8 +137,6 @@ export const useGalleryFiles = () => {
 
                 transformedFiles = (rawFiles || []).map(file => transformFileData(file, false, favoriteFileIds)).filter(f => f !== null);
 
-                console.log(`[Gallery] Loaded ${transformedFiles.length} files (page ${pageToLoad})`);
-
                 // Check if there are more pages
                 setHasMore(transformedFiles.length === 50);
             }
@@ -161,12 +152,6 @@ export const useGalleryFiles = () => {
 
             apiEndTime.current = performance.now();
             totalImagesToLoad.current = transformedFiles.length;
-
-            if (transformedFiles.length === 0) {
-                console.timeEnd('Gallery Load');
-                const totalTime = apiEndTime.current - loadStartTime.current;
-                console.log(`[Performance] No files to load. Total time: ${totalTime.toFixed(2)}ms`);
-            }
 
             // Extract unique tags
             const allTags = new Set();
@@ -198,19 +183,7 @@ export const useGalleryFiles = () => {
 
     const handleImageLoad = () => {
         loadedImagesCount.current += 1;
-
-        if (loadedImagesCount.current === totalImagesToLoad.current && totalImagesToLoad.current > 0) {
-            const endTime = performance.now();
-            const totalTime = endTime - loadStartTime.current;
-            const apiTime = apiEndTime.current - loadStartTime.current;
-            const renderTime = endTime - apiEndTime.current;
-
-            console.timeEnd('Gallery Load');
-            console.log(`[Performance] All ${totalImagesToLoad.current} images loaded.`);
-            console.log(`[Performance] Total Time: ${totalTime.toFixed(2)}ms`);
-            console.log(`[Performance] API Latency: ${apiTime.toFixed(2)}ms`);
-            console.log(`[Performance] Image Rendering Time: ${renderTime.toFixed(2)}ms`);
-        }
+        // Performance tracking removed for production
     };
 
     const loadMore = async ({ dateRange, filterType, sortOption, favoriteOnly, folderId } = {}) => {
@@ -248,17 +221,6 @@ function transformFileData(file, isFavoriteList, favoriteFileIds) {
     const thumbUrl = file.thumbnail_url || file.thumbnailUrl;
     const isVideoProcessing = fileType === 'video' &&
         (!thumbUrl || file.processing_status === 'pending' || file.processing_status === 'processing');
-
-    // Debug: Log video file info
-    if (fileType === 'video') {
-        console.log(`[Gallery ${isFavoriteList ? 'Favorites' : ''}] Video file:`, {
-            name: file.file_name || file.fileName,
-            thumbnail_url: thumbUrl,
-            download_url: file.download_url || file.downloadUrl,
-            processing_status: file.processing_status,
-            isVideoProcessing
-        });
-    }
 
     // Determine thumbnail URL
     let thumbnailUrl;

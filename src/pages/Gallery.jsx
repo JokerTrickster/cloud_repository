@@ -14,7 +14,6 @@ import GalleryToolbar from '../components/GalleryToolbar';
 import GallerySearchBar from '../components/GallerySearchBar';
 import TagFilterBar from '../components/TagFilterBar';
 import GalleryGrid from '../components/GalleryGrid';
-import DebugLogger from '../components/DebugLogger';
 import FolderSidebar from '../components/FolderSidebar';
 import CreateFolderModal from '../components/CreateFolderModal';
 import MoveFilesModal from '../components/MoveFilesModal';
@@ -88,7 +87,6 @@ const Gallery = () => {
     // Listen for file:processed events from WebSocket
     useEffect(() => {
         const handleFileProcessed = (event) => {
-            console.log('[Gallery] File processed event received:', event.detail);
             // Reload gallery to show the newly processed file
             loadFiles();
         };
@@ -113,7 +111,6 @@ const Gallery = () => {
 
             // Load more when user is within 500px of bottom
             if (distanceFromBottom < 500 && hasMore && !loading) {
-                console.log('[InfiniteScroll] Loading more files...');
                 loadMore({
                     dateRange,
                     filterType,
@@ -139,7 +136,6 @@ const Gallery = () => {
             if ('wakeLock' in navigator) {
                 try {
                     wakeLockRef.current = await navigator.wakeLock.request('screen');
-                    console.log('[WakeLock] Screen Wake Lock active');
                 } catch (err) {
                     console.error('[WakeLock] Failed to acquire lock:', err);
                 }
@@ -151,7 +147,6 @@ const Gallery = () => {
                 try {
                     await wakeLockRef.current.release();
                     wakeLockRef.current = null;
-                    console.log('[WakeLock] Screen Wake Lock released');
                 } catch (err) {
                     console.error('[WakeLock] Failed to release lock:', err);
                 }
@@ -235,7 +230,6 @@ const Gallery = () => {
             // 모든 파일이 완료되면 갤러리 새로고침
             const allCompleted = statusResults.every(s => s.status === 'completed' || s.status === 'failed');
             if (allCompleted && hasChanges) {
-                console.log('[Gallery] All files processed, reloading gallery');
                 setTimeout(() => loadFiles(), 1000);
             }
 
@@ -351,9 +345,6 @@ const Gallery = () => {
     }, [selectedFiles, loadFiles]);
 
     const handleUploadStart = useCallback((files, fileTags, uploadFn) => {
-        console.log('[Gallery] Starting upload for', files.length, 'files');
-        console.log('[Gallery] File sizes:', files.map(f => `${f.name}: ${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB`));
-
         // 업로드 상태 초기화
         setUploadState({
             files: files.map(f => ({ name: f.name, size: f.size })),
@@ -364,12 +355,8 @@ const Gallery = () => {
             done: false
         });
 
-        console.log('[Gallery] Upload state initialized, closing modal');
-
         // 모달 즉시 닫기
         setShowUpload(false);
-
-        console.log('[Gallery] Calling uploadFn...');
 
         // 백그라운드에서 업로드 실행
         try {
@@ -385,8 +372,6 @@ const Gallery = () => {
                         const newProgress = { ...prev.progress, [fileIndex]: progress };
                         const completedCount = Object.values(newProgress).filter(p => p === 100).length;
 
-                        console.log(`[Gallery] Upload progress - File ${fileIndex}: ${progress}% (${status})`);
-
                         return {
                             ...prev,
                             progress: newProgress,
@@ -395,13 +380,9 @@ const Gallery = () => {
                     });
                 }
             ).then(results => {
-                console.log('[Gallery] Upload completed, results:', results);
-
                 // 업로드 완료
                 const successCount = results.filter(r => r.file_id).length;
                 const failedCount = results.filter(r => !r.file_id).length;
-
-                console.log(`[Gallery] Success: ${successCount}, Failed: ${failedCount}`);
 
                 setUploadState(prev => prev ? {
                     ...prev,
@@ -415,7 +396,6 @@ const Gallery = () => {
 
                 // 5초 후 토스트 자동 닫기
                 setTimeout(() => {
-                    console.log('[Gallery] Auto-closing upload state');
                     setUploadState(null);
                 }, 5000);
             }).catch(error => {
@@ -512,9 +492,7 @@ const Gallery = () => {
 
         try {
             // API call
-            console.log('[Favorite] Toggling favorite:', { fileId, currentFavorite, action: currentFavorite ? 'remove' : 'add' });
             await fileApi.toggleFavorite(fileId, currentFavorite);
-            console.log('[Favorite] Success');
         } catch (error) {
             console.error('[Favorite] Toggle failed:', error);
             console.error('[Favorite] Error details:', {
@@ -539,7 +517,6 @@ const Gallery = () => {
 
     // Handle tag update from TagEditor
     const handleTagUpdate = useCallback((fileId, newTags) => {
-        console.log('[Tags] Updating tags:', { fileId, newTags });
         setFiles(prevFiles =>
             prevFiles.map(f =>
                 f.id === fileId ? { ...f, tags: newTags } : f
@@ -570,36 +547,17 @@ const Gallery = () => {
     // Note: When currentFolder is set, loadFiles already loads folder-specific files via backend API
     // So we don't need to filter again - just return filteredFiles directly
     const folderFilteredFiles = useMemo(() => {
-        console.log('[FolderFilter] Files loaded:', {
-            totalFiles: filteredFiles?.length || 0,
-            currentFolder: currentFolder?.id || 'root',
-            currentFolderName: currentFolder?.folder_name || 'root'
-        });
-
         if (!filteredFiles || filteredFiles.length === 0) {
-            console.log('[FolderFilter] No files to filter');
             return [];
         }
 
         if (currentFolder === null) {
             // Root view: Show files without folder (client-side filter needed)
-            const rootFiles = filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
-            console.log('[FolderFilter] Root files:', {
-                count: rootFiles.length,
-                fileIds: rootFiles.map(f => f.id),
-                sample: rootFiles.slice(0, 3).map(f => ({ id: f.id, name: f.name, folder_id: f.folder_id }))
-            });
-            return rootFiles;
+            return filteredFiles.filter(file => !file.folder_id || file.folder_id === null);
         }
 
         // Folder view: Backend already returned folder-specific files via loadFiles({ folderId })
         // No additional filtering needed - just return all filteredFiles
-        console.log('[FolderFilter] Folder files (from backend):', {
-            folderId: currentFolder.id,
-            folderName: currentFolder.folder_name,
-            count: filteredFiles.length,
-            fileIds: filteredFiles.map(f => f.id)
-        });
         return filteredFiles;
     }, [filteredFiles, currentFolder]);
 
@@ -619,7 +577,6 @@ const Gallery = () => {
 
     // Folder handlers
     const handleFolderSelect = useCallback((folder) => {
-        console.log('[Gallery] Folder selected:', folder?.id || 'root');
         setCurrentFolder(folder);
         setSelectedFiles([]); // Clear selection when changing folders
         // Note: useEffect will automatically reload files when currentFolder changes
@@ -698,42 +655,25 @@ const Gallery = () => {
     }, [currentFolder, loadFolders, loadFiles]);
 
     const handleMoveFilesToFolder = useCallback(() => {
-        console.log('[Gallery] handleMoveFilesToFolder called:', {
-            selectedFilesCount: selectedFiles.length,
-            selectedFileIds: selectedFiles
-        });
-
         if (selectedFiles.length === 0) {
-            console.log('[Gallery] No files selected, showing alert');
             alert('이동할 파일을 선택하세요.');
             return;
         }
 
-        console.log('[Gallery] Opening move files modal');
         setShowMoveFiles(true);
     }, [selectedFiles]);
 
     const handleMoveFiles = useCallback(async (targetFolderId) => {
         try {
-            console.log('[MoveFiles] Starting move operation:', {
-                selectedFiles,
-                targetFolderId,
-                currentFolderId: currentFolder?.id,
-                fileCount: selectedFiles.length
-            });
-
-            const result = await folderApi.moveFiles(selectedFiles, targetFolderId);
-            console.log('[MoveFiles] API response:', result);
+            await folderApi.moveFiles(selectedFiles, targetFolderId);
 
             setSelectedFiles([]);
             setIsSelectionMode(false);
 
             // Reload folders first to get updated file counts
-            console.log('[MoveFiles] Reloading folders...');
             await loadFolders();
 
             // Then reload files for current folder to refresh the view
-            console.log('[MoveFiles] Reloading files for current folder...');
             await loadFiles({
                 dateRange,
                 filterType,
@@ -741,8 +681,6 @@ const Gallery = () => {
                 favoriteOnly,
                 folderId: currentFolder?.id
             });
-
-            console.log('[MoveFiles] Move operation complete');
         } catch (err) {
             console.error('[Gallery] Move files failed:', err);
 
@@ -1055,9 +993,6 @@ const Gallery = () => {
                         resourceName={shareTarget?.name}
                     />
                 )}
-
-                {/* Debug Logger for mobile debugging */}
-                <DebugLogger />
             </div>
         </div>
     );
