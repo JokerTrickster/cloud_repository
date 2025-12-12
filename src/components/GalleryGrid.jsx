@@ -72,7 +72,16 @@ const GalleryGrid = ({
 
     // Gallery Grid with Files
     return (
-        <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
+        <div
+            style={{
+                flex: 1,
+                overflowY: 'auto',
+                // Performance optimizations
+                willChange: 'scroll-position',
+                contain: 'layout style paint'
+            }}
+            className="no-scrollbar"
+        >
             {/* Uploading Files Section */}
             {uploadState && !uploadState.done && (
                 <div style={{ marginBottom: '32px' }}>

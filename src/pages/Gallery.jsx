@@ -780,6 +780,9 @@ const Gallery = () => {
                     display: grid;
                     grid-template-columns: repeat(5, 1fr);
                     gap: 2px;
+                    /* Performance optimizations */
+                    will-change: contents;
+                    contain: layout;
                 }
                 @media (max-width: 768px) {
                     .gallery-grid {
